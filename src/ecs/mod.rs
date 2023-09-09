@@ -1,6 +1,5 @@
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
-use std::convert::identity;
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone)]
 pub struct Entity(i32);
@@ -69,14 +68,37 @@ impl ComponentManager {
     }
 
     pub fn add_component<C: 'static>(&mut self, e: Entity, component: C) {
+        let component_array = self.get_component_array_mut::<C>();
+        component_array.add_component(e, component);
+    }
+
+    pub fn get_component<C: 'static>(&self, e: Entity) -> Option<&C> {
+        let component_array = self.get_component_array::<C>();
+        component_array.get_component(e)
+    }
+
+    pub fn get_component_mut<C: 'static>(&mut self, e: Entity) -> Option<&mut C> {
+        let component_array = self.get_component_array_mut::<C>();
+        component_array.get_component_mut(e)
+    }
+
+    fn get_component_array_mut<C: 'static>(&mut self) -> &mut ComponentArray<C> {
         let type_id = TypeId::of::<C>();
-        let component_array = self
-            .type_to_components
+        self.type_to_components
             .get_mut(&type_id)
             .expect("Component is not registered")
             .downcast_mut::<ComponentArray<C>>()
-            .expect("Component array found but type not corresponded");
-        component_array.add_component(e, component);
+            .expect("Component array found but type not corresponded")
+    }
+
+    // TODO: repeated code
+    fn get_component_array<C: 'static>(&self) -> &ComponentArray<C> {
+        let type_id = TypeId::of::<C>();
+        self.type_to_components
+            .get(&type_id)
+            .expect("Component is not registered")
+            .downcast_ref::<ComponentArray<C>>()
+            .expect("Component array found but type not corresponded")
     }
 }
 
@@ -101,7 +123,7 @@ impl EntityManager {
         // TODO: optimize
         let mut e = Entity(0);
         loop {
-            if (!self.entities.contains(&e)) {
+            if !self.entities.contains(&e) {
                 break e;
             }
             e.0 = e.0 + 1;
@@ -128,6 +150,18 @@ impl Ecs {
 
     pub fn register_component<C: 'static>(&mut self) {
         self.component_manager.register_component::<C>();
+    }
+
+    pub fn add_component<C: 'static>(&mut self, e: Entity, component: C) {
+        self.component_manager.add_component(e, component);
+    }
+
+    pub fn get_component<C: 'static>(&self, e: Entity) -> Option<&C> {
+        self.component_manager.get_component(e)
+    }
+
+    pub fn get_component_mut<C: 'static>(&mut self, e: Entity) -> Option<&mut C> {
+        self.component_manager.get_component_mut(e)
     }
 
     pub fn register_system<S>(&mut self) -> System {
