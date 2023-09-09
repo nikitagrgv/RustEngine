@@ -4,10 +4,31 @@ use std::collections::HashMap;
 #[derive(Eq, Hash, PartialEq, Copy, Clone)]
 pub struct Entity(i32);
 
+
+// TODO: Wtf is this? Can be simpler?
+pub trait ToAny: 'static {
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+
+impl<T: 'static> ToAny for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
 pub struct ComponentArray<C> {
     components: Vec<C>,
     entity_to_index: HashMap<Entity, usize>,
 }
+
+pub trait ComponentBase: ToAny {}
+
+impl<T: 'static> ComponentBase for ComponentArray<T> {}
+
 
 impl<C> ComponentArray<C> {
     pub fn new() -> Self {
@@ -46,7 +67,7 @@ impl<C> ComponentArray<C> {
 }
 
 pub struct ComponentManager {
-    type_to_components: HashMap<TypeId, Box<dyn Any>>,
+    type_to_components: HashMap<TypeId, Box<dyn ComponentBase>>,
 }
 
 impl ComponentManager {
@@ -87,6 +108,7 @@ impl ComponentManager {
         self.type_to_components
             .get_mut(&type_id)
             .expect("Component is not registered")
+            .as_any_mut()
             .downcast_mut::<ComponentArray<C>>()
             .expect("Component array found but type not corresponded") // TODO: use unchecked downcast
     }
@@ -97,6 +119,7 @@ impl ComponentManager {
         self.type_to_components
             .get(&type_id)
             .expect("Component is not registered")
+            .as_any()
             .downcast_ref::<ComponentArray<C>>() // TODO: use unchecked downcast
             .expect("Component array found but type not corresponded")
     }
@@ -130,6 +153,11 @@ impl EntityManager {
         }
     }
 }
+
+pub trait SystemBase: ToAny {}
+
+
+
 
 pub struct Ecs {
     component_manager: ComponentManager,
