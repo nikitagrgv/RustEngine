@@ -5,12 +5,12 @@ use std::convert::identity;
 #[derive(Eq, Hash, PartialEq, Copy, Clone)]
 pub struct Entity(i32);
 
-pub struct ComponentArray<T> {
-    components: Vec<T>,
+pub struct ComponentArray<C> {
+    components: Vec<C>,
     entity_to_index: HashMap<Entity, usize>,
 }
 
-impl<T> ComponentArray<T> {
+impl<C> ComponentArray<C> {
     pub fn new() -> Self {
         ComponentArray {
             components: Vec::new(),
@@ -18,23 +18,23 @@ impl<T> ComponentArray<T> {
         }
     }
 
-    fn get_data(&self, e: Entity) -> Option<&T> {
+    fn get_component(&self, e: Entity) -> Option<&C> {
         let idx = self.get_index(e)?;
         self.components.get(idx)
     }
 
-    fn get_data_mut(&mut self, e: Entity) -> Option<&mut T> {
+    fn get_component_mut(&mut self, e: Entity) -> Option<&mut C> {
         let idx = self.get_index(e)?;
         self.components.get_mut(idx)
     }
 
-    fn add_data(&mut self, e: Entity, data: T) {
+    fn add_component(&mut self, e: Entity, component: C) {
         assert!(
             !self.entity_to_index.contains_key(&e),
             "Entity does not have this component"
         );
         self.entity_to_index.insert(e, self.components.len());
-        self.components.push(data);
+        self.components.push(component);
     }
 
     fn remove(&mut self, e: Entity) {
@@ -57,26 +57,26 @@ impl ComponentManager {
         }
     }
 
-    pub fn register_component<T: 'static>(&mut self) {
-        let type_id = TypeId::of::<T>();
+    pub fn register_component<C: 'static>(&mut self) {
+        let type_id = TypeId::of::<C>();
         assert!(
             !self.type_to_components.contains_key(&type_id),
             "Already registered"
         );
         let component_array = ComponentArray::new();
-        let component_array = Box::<ComponentArray<T>>::new(component_array);
+        let component_array = Box::<ComponentArray<C>>::new(component_array);
         self.type_to_components.insert(type_id, component_array);
     }
 
-    pub fn add_data<T: 'static>(&mut self, e: Entity, data: T) {
-        let type_id = TypeId::of::<T>();
+    pub fn add_component<C: 'static>(&mut self, e: Entity, component: C) {
+        let type_id = TypeId::of::<C>();
         let component_array = self
             .type_to_components
             .get_mut(&type_id)
             .expect("Component is not registered")
-            .downcast_mut::<ComponentArray<T>>()
+            .downcast_mut::<ComponentArray<C>>()
             .expect("Component array found but type not corresponded");
-        component_array.add_data(e, data);
+        component_array.add_component(e, component);
     }
 }
 
@@ -126,11 +126,11 @@ impl Ecs {
         self.entity_manager.create_entity()
     }
 
-    pub fn register_component<T: 'static>(&mut self) {
-        self.component_manager.register_component::<T>();
+    pub fn register_component<C: 'static>(&mut self) {
+        self.component_manager.register_component::<C>();
     }
 
-    pub fn register_system<T>(&mut self) -> System {
+    pub fn register_system<S>(&mut self) -> System {
         todo!()
     }
 }
