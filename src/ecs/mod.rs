@@ -88,7 +88,7 @@ impl ComponentManager {
             .get_mut(&type_id)
             .expect("Component is not registered")
             .downcast_mut::<ComponentArray<C>>()
-            .expect("Component array found but type not corresponded")
+            .expect("Component array found but type not corresponded") // TODO: use unchecked downcast
     }
 
     // TODO: repeated code
@@ -97,7 +97,7 @@ impl ComponentManager {
         self.type_to_components
             .get(&type_id)
             .expect("Component is not registered")
-            .downcast_ref::<ComponentArray<C>>()
+            .downcast_ref::<ComponentArray<C>>() // TODO: use unchecked downcast
             .expect("Component array found but type not corresponded")
     }
 }
