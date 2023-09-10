@@ -22,6 +22,8 @@ fn main() {
     let m = cm.get_component::<Mass>(e);
     let m = cm.get_component_mut::<Mass>(e);
 
+    let mut sm = SystemManager::new();
+    let sys = sm.create_system();
 
 
 }

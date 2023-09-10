@@ -9,6 +9,7 @@ pub struct Entity(usize);
 
 /// System says about set of components that will be tracked by ECS.
 /// You can get a set of entities with these components using the SystemId
+#[derive(Eq, Hash, PartialEq, Copy, Clone)]
 pub struct SystemId(usize);
 
 ///////////////////////////////////////
@@ -149,19 +150,19 @@ impl Signature {
         }
     }
 
-    pub fn add_component<T: 'static>(&mut self) {
-        let typeid = TypeId::of::<T>();
+    pub fn add_component<C: 'static>(&mut self) {
+        let typeid = TypeId::of::<C>();
         self.components.insert(typeid);
     }
 
-    pub fn remove_component<T: 'static>(&mut self) {
-        let typeid = TypeId::of::<T>();
+    pub fn remove_component<C: 'static>(&mut self) {
+        let typeid = TypeId::of::<C>();
         self.components.remove(&typeid);
     }
 
-    pub fn has_component<T: 'static>(&self) {
-        let typeid = TypeId::of::<T>();
-        self.components.contains(&typeid);
+    pub fn has_component<C: 'static>(&self) -> bool {
+        let typeid = TypeId::of::<C>();
+        self.components.contains(&typeid)
     }
 }
 
@@ -193,12 +194,6 @@ impl EntityManager {
         todo!();
     }
 
-    pub fn get_signature_mut(&mut self, e: Entity) -> &mut Signature {
-        self.entity_to_signature
-            .get_mut(&e)
-            .expect("No such entity")
-    }
-
     pub fn get_signature_ref(&mut self, e: Entity) -> &Signature {
         self.entity_to_signature.get(&e).expect("No such entity")
     }
@@ -218,6 +213,88 @@ impl EntityManager {
                 break e;
             }
             e.0 = e.0 + 1;
+        }
+    }
+}
+
+pub struct System {
+    signature: Signature,
+    entities: Vec<Entity>,
+}
+
+impl System {
+    pub fn new() -> Self {
+        Self {
+            signature: Signature::new(),
+            entities: Vec::new(),
+        }
+    }
+
+    pub fn with_sig(sig: Signature) -> Self {
+        Self {
+            signature: sig,
+            entities: Vec::new(),
+        }
+    }
+
+    pub fn get_signature_ref(&mut self) -> &Signature {
+        &self.signature
+    }
+
+    pub fn set_signature(&mut self, sig: Signature) {
+        self.signature = sig;
+    }
+
+    pub fn has_component<C: 'static>(&self) -> bool {
+        self.signature.has_component::<C>()
+    }
+}
+
+pub struct SystemManager {
+    id_to_system: HashMap<SystemId, System>,
+}
+
+impl SystemManager {
+    pub fn new() -> Self {
+        Self {
+            id_to_system: HashMap::new(),
+        }
+    }
+
+    pub fn create_system_with_signature(&mut self, sig: Signature) -> SystemId {
+        let id = self.get_free_system_id();
+        let sys = System::with_sig(sig);
+        self.id_to_system.insert(id, sys);
+        id
+    }
+
+    pub fn create_system(&mut self) -> SystemId {
+        let id = self.get_free_system_id();
+        let sys = System::new();
+        self.id_to_system.insert(id, sys);
+        id
+    }
+
+    pub fn remove_system(&mut self, s: SystemId) {
+        todo!();
+    }
+
+    pub fn get_signature_ref(&mut self, s: SystemId) -> &Signature {
+        &self.id_to_system.get(&s).expect("No such system").signature
+    }
+
+    pub fn set_signature(&mut self, s: SystemId, sig: Signature) {
+        self.id_to_system.get_mut(&s).expect("No such system").set_signature(sig);
+    }
+
+    fn get_free_system_id(&self) -> SystemId {
+        // TODO: find better way
+        let mut s = SystemId(0);
+        loop {
+            if !self.id_to_system.contains_key(&s) {
+                break s;
+            }
+            s.0 = s.0 + 1;
         }
     }
 }
