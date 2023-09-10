@@ -7,7 +7,7 @@ use std::ops::{Deref, DerefMut};
 #[derive(Eq, Hash, PartialEq, Copy, Clone)]
 pub struct Entity(usize);
 
-/// System says about set of components that will be tracked by ECS.
+/// System says about set of components that will be tracked by Ecs.
 /// You can get a set of entities with these components using the SystemId
 #[derive(Eq, Hash, PartialEq, Copy, Clone)]
 pub struct SystemId(usize);
@@ -150,9 +150,10 @@ impl Signature {
         }
     }
 
-    pub fn add_component<C: 'static>(&mut self) {
+    pub fn add_component<C: 'static>(&mut self) -> &mut Self {
         let typeid = TypeId::of::<C>();
         self.components.insert(typeid);
+        self
     }
 
     pub fn remove_component<C: 'static>(&mut self) {
@@ -175,12 +176,6 @@ impl EntityManager {
         Self {
             entity_to_signature: HashMap::new(),
         }
-    }
-
-    pub fn create_entity_with_sig(&mut self, sig: Signature) -> Entity {
-        let e = self.get_free_entity();
-        self.entity_to_signature.insert(e, sig);
-        e
     }
 
     pub fn create_entity(&mut self) -> Entity {
@@ -248,6 +243,10 @@ impl System {
     pub fn has_component<C: 'static>(&self) -> bool {
         self.signature.has_component::<C>()
     }
+
+    pub fn get_entities(&self) -> &Vec<Entity> {
+        &self.entities
+    }
 }
 
 pub struct SystemManager {
@@ -290,6 +289,13 @@ impl SystemManager {
             .set_signature(sig);
     }
 
+    pub fn get_entities(&self, s: SystemId) -> &Vec<Entity> {
+        self.id_to_system
+            .get(&s)
+            .expect("No such system")
+            .get_entities()
+    }
+
     fn get_free_system_id(&self) -> SystemId {
         // TODO: find better way
         let mut s = SystemId(0);
@@ -302,13 +308,13 @@ impl SystemManager {
     }
 }
 
-pub struct ECS {
+pub struct Ecs {
     entity_manager: EntityManager,
     component_manager: ComponentManager,
     system_manager: SystemManager,
 }
 
-impl ECS {
+impl Ecs {
     pub fn new() -> Self {
         Self {
             entity_manager: EntityManager::new(),
@@ -318,10 +324,6 @@ impl ECS {
     }
 
     ////////////// Entity
-
-    pub fn create_entity_with_sig(&mut self, sig: Signature) -> Entity {
-        self.entity_manager.create_entity_with_sig(sig)
-    }
 
     pub fn create_entity(&mut self) -> Entity {
         self.entity_manager.create_entity()
@@ -341,8 +343,9 @@ impl ECS {
 
     ////////////// Component
 
-    pub fn register_component<C: 'static>(&mut self) {
+    pub fn register_component<C: 'static>(&mut self) -> &mut Self {
         self.component_manager.register_component::<C>();
+        self
     }
 
     pub fn add_component<C: 'static>(&mut self, e: Entity, comp: C) {
@@ -381,5 +384,9 @@ impl ECS {
 
     pub fn set_system_signature(&mut self, s: SystemId, sig: Signature) {
         self.system_manager.set_signature(s, sig);
+    }
+
+    pub fn get_system_entities(&self, s: SystemId) -> &Vec<Entity> {
+        self.system_manager.get_entities(s)
     }
 }
