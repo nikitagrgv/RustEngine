@@ -106,7 +106,7 @@ impl ComponentManager {
         self.get_component_array_mut::<C>().get_component_mut(e)
     }
 
-    pub fn remove_entity(&mut self, e: Entity) {
+    pub fn on_entity_removed(&mut self, e: Entity) {
         self.type_to_component_array
             .values_mut()
             .for_each(|ca| ca.on_entity_removed(e));
@@ -284,7 +284,10 @@ impl SystemManager {
     }
 
     pub fn set_signature(&mut self, s: SystemId, sig: Signature) {
-        self.id_to_system.get_mut(&s).expect("No such system").set_signature(sig);
+        self.id_to_system
+            .get_mut(&s)
+            .expect("No such system")
+            .set_signature(sig);
     }
 
     fn get_free_system_id(&self) -> SystemId {
@@ -296,5 +299,87 @@ impl SystemManager {
             }
             s.0 = s.0 + 1;
         }
+    }
+}
+
+pub struct ECS {
+    entity_manager: EntityManager,
+    component_manager: ComponentManager,
+    system_manager: SystemManager,
+}
+
+impl ECS {
+    pub fn new() -> Self {
+        Self {
+            entity_manager: EntityManager::new(),
+            component_manager: ComponentManager::new(),
+            system_manager: SystemManager::new(),
+        }
+    }
+
+    ////////////// Entity
+
+    pub fn create_entity_with_sig(&mut self, sig: Signature) -> Entity {
+        self.entity_manager.create_entity_with_sig(sig)
+    }
+
+    pub fn create_entity(&mut self) -> Entity {
+        self.entity_manager.create_entity()
+    }
+
+    pub fn remove_entity(&mut self, e: Entity) {
+        self.entity_manager.remove_entity(e);
+    }
+
+    pub fn get_entity_signature_ref(&mut self, e: Entity) -> &Signature {
+        self.entity_manager.get_signature_ref(e)
+    }
+
+    pub fn set_entity_signature(&mut self, e: Entity, sig: Signature) {
+        self.entity_manager.set_signature(e, sig);
+    }
+
+    ////////////// Component
+
+    pub fn register_component<C: 'static>(&mut self) {
+        self.component_manager.register_component::<C>();
+    }
+
+    pub fn add_component<C: 'static>(&mut self, e: Entity, comp: C) {
+        self.component_manager.add_component::<C>(e, comp);
+    }
+
+    pub fn remove_component<C: 'static>(&mut self, e: Entity) {
+        self.component_manager.remove_component::<C>(e);
+    }
+
+    pub fn get_component<C: 'static>(&self, e: Entity) -> &C {
+        self.component_manager.get_component(e)
+    }
+
+    pub fn get_component_mut<C: 'static>(&mut self, e: Entity) -> &mut C {
+        self.component_manager.get_component_mut(e)
+    }
+
+    ////////////// System
+
+    pub fn create_system_with_signature(&mut self, sig: Signature) -> SystemId {
+        self.system_manager.create_system_with_signature(sig)
+    }
+
+    pub fn create_system(&mut self) -> SystemId {
+        self.system_manager.create_system()
+    }
+
+    pub fn remove_system(&mut self, s: SystemId) {
+        self.system_manager.remove_system(s);
+    }
+
+    pub fn get_system_signature_ref(&mut self, s: SystemId) -> &Signature {
+        self.system_manager.get_signature_ref(s)
+    }
+
+    pub fn set_system_signature(&mut self, s: SystemId, sig: Signature) {
+        self.system_manager.set_signature(s, sig);
     }
 }
