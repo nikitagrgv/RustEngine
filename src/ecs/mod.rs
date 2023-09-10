@@ -1,36 +1,21 @@
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
+use std::convert::identity;
 
+/// Entity is just id. You can assign components to Entity
 #[derive(Eq, Hash, PartialEq, Copy, Clone)]
-pub struct Entity(i32);
+pub struct Entity(usize);
 
+/// System says about set of components that will be tracked by ECS.
+/// You can get a set of entities with these components using the SystemId
+pub struct SystemId(usize);
 
-// TODO: Wtf is this? Can be simpler?
-pub trait ToAny: 'static {
-    fn as_any(&self) -> &dyn Any;
-    fn as_any_mut(&mut self) -> &mut dyn Any;
-}
-
-impl<T: 'static> ToAny for T {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-
-pub struct ComponentArray<C> {
-    components: Vec<C>,
+pub struct ComponentArray<T> {
+    components: Vec<T>,
     entity_to_index: HashMap<Entity, usize>,
 }
 
-pub trait ComponentBase: ToAny {}
-
-impl<T: 'static> ComponentBase for ComponentArray<T> {}
-
-
-impl<C> ComponentArray<C> {
+impl<T> ComponentArray<T> {
     pub fn new() -> Self {
         ComponentArray {
             components: Vec::new(),
@@ -38,165 +23,34 @@ impl<C> ComponentArray<C> {
         }
     }
 
-    fn get_component(&self, e: Entity) -> Option<&C> {
-        let idx = self.get_index(e)?;
-        self.components.get(idx)
-    }
-
-    fn get_component_mut(&mut self, e: Entity) -> Option<&mut C> {
-        let idx = self.get_index(e)?;
-        self.components.get_mut(idx)
-    }
-
-    fn add_component(&mut self, e: Entity, component: C) {
-        assert!(
-            !self.entity_to_index.contains_key(&e),
-            "Entity does not have this component"
-        );
+    pub fn add_component(&mut self, e: Entity, comp: T) {
+        assert!(!self.entity_to_index.contains_key(&e));
         self.entity_to_index.insert(e, self.components.len());
-        self.components.push(component);
+        self.components.push(comp);
     }
 
-    fn remove(&mut self, e: Entity) {
+    pub fn remove_component(&mut self, e: Entity) {
         todo!();
     }
 
-    fn get_index(&self, e: Entity) -> Option<usize> {
-        self.entity_to_index.get(&e).map(|idx| *idx)
+    pub fn get_component(&self, e: Entity) -> &T {
+        let idx = self.get_idx(e);
+        self.components.get(idx).unwrap()
+    }
+
+    pub fn get_component_mut(&mut self, e: Entity) -> &mut T {
+        let idx = self.get_idx(e);
+        self.components.get_mut(idx).unwrap()
+    }
+
+    ///
+
+    fn get_idx(&self, e: Entity) -> usize {
+        *self
+            .entity_to_index
+            .get(&e)
+            .expect("This entity did not have this component")
     }
 }
 
-pub struct ComponentManager {
-    type_to_components: HashMap<TypeId, Box<dyn ComponentBase>>,
-}
 
-impl ComponentManager {
-    pub fn new() -> Self {
-        ComponentManager {
-            type_to_components: HashMap::new(),
-        }
-    }
-
-    pub fn register_component<C: 'static>(&mut self) {
-        let type_id = TypeId::of::<C>();
-        assert!(
-            !self.type_to_components.contains_key(&type_id),
-            "Already registered"
-        );
-        let component_array = ComponentArray::new();
-        let component_array = Box::<ComponentArray<C>>::new(component_array);
-        self.type_to_components.insert(type_id, component_array);
-    }
-
-    pub fn add_component<C: 'static>(&mut self, e: Entity, component: C) {
-        let component_array = self.get_component_array_mut::<C>();
-        component_array.add_component(e, component);
-    }
-
-    pub fn get_component<C: 'static>(&self, e: Entity) -> Option<&C> {
-        let component_array = self.get_component_array::<C>();
-        component_array.get_component(e)
-    }
-
-    pub fn get_component_mut<C: 'static>(&mut self, e: Entity) -> Option<&mut C> {
-        let component_array = self.get_component_array_mut::<C>();
-        component_array.get_component_mut(e)
-    }
-
-    fn get_component_array_mut<C: 'static>(&mut self) -> &mut ComponentArray<C> {
-        let type_id = TypeId::of::<C>();
-        self.type_to_components
-            .get_mut(&type_id)
-            .expect("Component is not registered")
-            .as_any_mut()
-            .downcast_mut::<ComponentArray<C>>()
-            .expect("Component array found but type not corresponded") // TODO: use unchecked downcast
-    }
-
-    // TODO: repeated code
-    fn get_component_array<C: 'static>(&self) -> &ComponentArray<C> {
-        let type_id = TypeId::of::<C>();
-        self.type_to_components
-            .get(&type_id)
-            .expect("Component is not registered")
-            .as_any()
-            .downcast_ref::<ComponentArray<C>>() // TODO: use unchecked downcast
-            .expect("Component array found but type not corresponded")
-    }
-}
-
-struct EntityManager {
-    entities: Vec<Entity>,
-}
-
-impl EntityManager {
-    pub fn new() -> Self {
-        EntityManager {
-            entities: Vec::new(),
-        }
-    }
-
-    pub fn create_entity(&mut self) -> Entity {
-        let e = self.get_free_entity();
-        self.entities.push(e);
-        e
-    }
-
-    fn get_free_entity(&self) -> Entity {
-        // TODO: optimize
-        let mut e = Entity(0);
-        loop {
-            if !self.entities.contains(&e) {
-                break e;
-            }
-            e.0 = e.0 + 1;
-        }
-    }
-}
-
-pub trait SystemBase: ToAny {}
-
-
-
-
-pub struct Ecs {
-    component_manager: ComponentManager,
-    entity_manager: EntityManager,
-}
-
-impl Ecs {
-    pub fn new() -> Self {
-        Ecs {
-            component_manager: ComponentManager::new(),
-            entity_manager: EntityManager::new(),
-        }
-    }
-
-    pub fn create_entity(&mut self) -> Entity {
-        self.entity_manager.create_entity()
-    }
-
-    pub fn register_component<C: 'static>(&mut self) {
-        self.component_manager.register_component::<C>();
-    }
-
-    pub fn add_component<C: 'static>(&mut self, e: Entity, component: C) {
-        self.component_manager.add_component(e, component);
-    }
-
-    pub fn get_component<C: 'static>(&self, e: Entity) -> Option<&C> {
-        self.component_manager.get_component(e)
-    }
-
-    pub fn get_component_mut<C: 'static>(&mut self, e: Entity) -> Option<&mut C> {
-        self.component_manager.get_component_mut(e)
-    }
-
-    pub fn register_system<S>(&mut self) -> System {
-        todo!()
-    }
-}
-
-pub struct Signature {}
-
-pub struct System {}
