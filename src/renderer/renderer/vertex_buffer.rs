@@ -1,7 +1,7 @@
 use std::os::raw::c_void;
 
 use gl33::gl_core_types;
-use gl33::global_loader::{glBindBuffer, glBufferData, glGenBuffers};
+use gl33::global_loader::{glBindBuffer, glBufferData, glGenBuffers, glDeleteBuffers};
 
 pub struct VertexBuffer {
     id: u32,
@@ -23,11 +23,19 @@ impl VertexBuffer {
         Self { id }
     }
 
-    fn bind(self) {
+    pub fn bind(self) {
         todo!();
     }
 
-    fn unbind(self) {
+    pub fn unbind(self) {
         todo!();
+    }
+}
+
+impl Drop for VertexBuffer {
+    fn drop(&mut self) {
+        unsafe {
+            glDeleteBuffers(1, &self.id);
+        }
     }
 }

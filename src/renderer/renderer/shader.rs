@@ -26,15 +26,15 @@ impl Shader {
         todo!();
     }
 
-    pub fn setUniform1f(&self, name: &str, value: f32) {
+    pub fn set_uniform1f(&self, name: &str, value: f32) {
         todo!();
     }
 
-    pub fn setUniform1i(&self, name: &str, value: i32) {
+    pub fn set_uniform1i(&self, name: &str, value: i32) {
         todo!();
     }
 
-    pub fn setUniform4f(&self, name: &str, value: glm::Vec4) {
+    pub fn set_uniform4f(&self, name: &str, value: glm::Vec4) {
         todo!();
     }
 
@@ -46,4 +46,3 @@ impl Shader {
         todo!();
     }
 }
-
