@@ -6,7 +6,7 @@ pub trait DefaultConstruct {
 macro_rules! impl_default {
     ($Type:ty,
     $Default:expr) => {
-        impl DefaultConstruct for $Type {+
+        impl DefaultConstruct for $Type {
             fn new() -> Self {
                 $Default
             }
