@@ -40,4 +40,12 @@ impl VertexBufferLayout {
         self.stride += count * VertexBufferLayoutElement::get_type_size(element_type).unwrap();
         self.elements.push(VertexBufferLayoutElement::new(element_type, count, normalized));
     }
+
+    fn get_elements(&self) -> &Vec<VertexBufferLayoutElement> {
+        &self.elements
+    }
+
+    fn get_stride(&self) -> u32 {
+        self.stride
+    }
 }

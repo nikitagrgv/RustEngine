@@ -23,10 +23,14 @@ impl IndexBuffer {
         Self { id, count }
     }
     fn bind(self) {
-        todo!();
+        unsafe {
+            glBindBuffer(gl33::gl_enumerations::GL_ELEMENT_ARRAY_BUFFER, self.id);
+        }
     }
     fn unbind(self) {
-        todo!();
+        unsafe {
+            glBindBuffer(gl33::gl_enumerations::GL_ELEMENT_ARRAY_BUFFER, 0);
+        }
     }
 }
 

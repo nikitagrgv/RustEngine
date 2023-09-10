@@ -1,5 +1,6 @@
 mod ecs;
 mod utils;
+mod renderer;
 
 use ecs::*;
 
