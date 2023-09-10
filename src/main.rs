@@ -1,4 +1,5 @@
 mod ecs;
+mod utils;
 
 use ecs::*;
 use std::collections::HashMap;
@@ -11,5 +12,4 @@ struct Velocity {}
 
 struct PhysicsSystem {}
 
-fn main() {
-}
+fn main() {}
