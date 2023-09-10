@@ -36,8 +36,8 @@ impl VertexBufferLayout {
         }
     }
 
-    fn push(&mut self, count : u32, element_type: gl33::GLenum) {
+    fn push(&mut self, count : u32, element_type: gl33::GLenum, normalized : bool) {
         self.stride += count * VertexBufferLayoutElement::get_type_size(element_type).unwrap();
-        self.elements.push(VertexBufferLayoutElement::new(element_type, count, false));
+        self.elements.push(VertexBufferLayoutElement::new(element_type, count, normalized));
     }
 }
