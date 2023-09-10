@@ -4,20 +4,16 @@ mod utils;
 
 use crate::ecs::*;
 use crate::math::*;
-use crate::utils::default_construct::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 struct Position(Vec3f);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 struct Mass(f32);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 struct Velocity(Vec3f);
 
-impl_default!(Position, Position(Vec3f::new()));
-impl_default!(Mass, Mass(0f32));
-impl_default!(Velocity, Velocity(Vec3f::new()));
 
 fn main() {
     // Set up
@@ -38,9 +34,9 @@ fn main() {
 
     fn create_phys_entity(ecs: &mut Ecs) -> Entity {
         let e = ecs.create_entity();
-        ecs.add_component(e, Position::new());
-        ecs.add_component(e, Velocity::new());
-        ecs.add_component(e, Mass::new());
+        ecs.add_component(e, Position::default());
+        ecs.add_component(e, Velocity::default());
+        ecs.add_component(e, Mass::default());
         e
     }
 
