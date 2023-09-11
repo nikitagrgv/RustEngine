@@ -190,7 +190,7 @@ impl EntityManager {
         todo!();
     }
 
-    pub fn get_signature_ref(&mut self, e: Entity) -> &Signature {
+    pub fn get_signature(&mut self, e: Entity) -> &Signature {
         self.entity_to_signature.get(&e).expect("No such entity")
     }
 
@@ -233,7 +233,7 @@ impl System {
         }
     }
 
-    pub fn get_signature_ref(&mut self) -> &Signature {
+    pub fn get_signature(&mut self) -> &Signature {
         &self.signature
     }
 
@@ -279,7 +279,7 @@ impl SystemManager {
         todo!();
     }
 
-    pub fn get_signature_ref(&mut self, s: SystemId) -> &Signature {
+    pub fn get_signature(&mut self, s: SystemId) -> &Signature {
         &self.id_to_system.get(&s).expect("No such system").signature
     }
 
@@ -334,8 +334,8 @@ impl Ecs {
         self.entity_manager.remove_entity(e);
     }
 
-    pub fn get_entity_signature_ref(&mut self, e: Entity) -> &Signature {
-        self.entity_manager.get_signature_ref(e)
+    pub fn get_entity_signature(&mut self, e: Entity) -> &Signature {
+        self.entity_manager.get_signature(e)
     }
 
     pub fn set_entity_signature(&mut self, e: Entity, sig: Signature) {
@@ -379,8 +379,8 @@ impl Ecs {
         self.system_manager.remove_system(s);
     }
 
-    pub fn get_system_signature_ref(&mut self, s: SystemId) -> &Signature {
-        self.system_manager.get_signature_ref(s)
+    pub fn get_system_signature(&mut self, s: SystemId) -> &Signature {
+        self.system_manager.get_signature(s)
     }
 
     pub fn set_system_signature(&mut self, s: SystemId, sig: Signature) {
