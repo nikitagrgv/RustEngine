@@ -2,9 +2,10 @@ mod ecs;
 mod math;
 mod utils;
 
-use std::ops::DerefMut;
 use crate::ecs::*;
 use crate::math::*;
+use std::ops::{Deref, DerefMut};
+use crate::utils::to_any::ToAny;
 
 #[derive(Clone, Copy, Default)]
 struct Position(Vec3f);
@@ -14,6 +15,29 @@ struct Mass(f32);
 
 #[derive(Clone, Copy, Default)]
 struct Velocity(Vec3f);
+
+
+
+
+
+// impl<'a, C: 'static> Deref for ComponentRef<'a, C> {
+//     type Target = C;
+//
+//     fn deref(&self) -> &Self::Target {
+//         // &self.comp
+//         todo!()
+//     }
+// }
+//
+// impl<'a, C: 'static> DerefMut for ComponentRef<'a, C> {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         todo!()
+//
+//         // &mut self.comp
+//     }
+// }
+//
+
 
 
 fn main() {
@@ -26,10 +50,7 @@ fn main() {
 
     let phys_sys = {
         let mut phys_sig = Signature::new();
-        phys_sig
-            .add::<Position>()
-            .add::<Velocity>()
-            .add::<Mass>();
+        phys_sig.add::<Position>().add::<Velocity>().add::<Mass>();
         ecs.create_system_with_signature(phys_sig)
     };
 
@@ -48,8 +69,7 @@ fn main() {
     let e4 = create_phys_entity(&mut ecs);
 
     // Using ecs
-    for _ in [0..10]
-    {
+    for _ in [0..10] {
         let phys_ents = ecs.get_system_entities(phys_sys);
         println!("PHYS ENTS {:?}", phys_ents);
         for &ent in phys_ents {
@@ -59,8 +79,7 @@ fn main() {
 
             pos.0.x = pos.0.x + 1f32;
 
-            println!("ENTITY {:?} - POS {:?}", ent, pos.0.x);
+            // println!("ENTITY {:?} - POS {:?}", ent, pos.0.x);
         }
     }
-
 }

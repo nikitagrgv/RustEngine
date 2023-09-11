@@ -13,11 +13,43 @@ pub struct Entity(usize);
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
 pub struct SystemId(usize);
 
+pub struct ComponentRef<'a, C: 'static> {
+    comp: &'a C,
+    comp_ref: Ref<'a, Vec<C>>,
+}
+
+pub struct ComponentRefMut<'a, C: 'static> {
+    comp: &'a mut C,
+    comp_ref_mut: RefMut<'a, Vec<C>>,
+}
+
+impl<'a, C: 'static> Deref for ComponentRef<'a, C> {
+    type Target = C;
+
+    fn deref(&self) -> &Self::Target {
+        &self.comp
+    }
+}
+
+impl<'a, C: 'static> Deref for ComponentRefMut<'a, C> {
+    type Target = C;
+
+    fn deref(&self) -> &Self::Target {
+        &self.comp
+    }
+}
+
+impl<'a, C: 'static> DerefMut for ComponentRefMut<'a, C> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.comp
+    }
+}
+
 ///////////////////////////////////////
 
 pub struct ComponentArray<C> {
     // TODO: RefCell<Vec> !
-    components: Vec<RefCell<C>>,
+    components: RefCell<Vec<C>>,
     entity_to_index: HashMap<Entity, usize>,
     // TODO: index_to_entity?
 }
@@ -25,29 +57,34 @@ pub struct ComponentArray<C> {
 impl<C: 'static> ComponentArray<C> {
     pub fn new() -> Self {
         Self {
-            components: Vec::new(),
+            components: RefCell::new(Vec::new()),
             entity_to_index: HashMap::new(),
         }
     }
 
     pub fn add_component(&mut self, e: Entity, comp: C) {
         assert!(!self.entity_to_index.contains_key(&e));
-        self.entity_to_index.insert(e, self.components.len());
-        self.components.push(comp.into());
+        self.entity_to_index
+            .insert(e, self.components.borrow().len());
+        self.components.borrow_mut().push(comp.into());
     }
 
     pub fn remove_component(&mut self, e: Entity) {
         todo!();
     }
 
-    pub fn get_component(&self, e: Entity) -> Ref<C> {
+    pub fn get_component(&self, e: Entity) -> ComponentRef<C> {
         let idx = self.get_idx(e);
-        self.components.get(idx).unwrap().borrow()
+        let comp_ref = self.components.borrow();
+        let comp = comp_ref.get(idx).unwrap();
+        ComponentRef::<C> { comp, comp_ref }
     }
 
-    pub fn get_component_mut(&self, e: Entity) -> RefMut<C> {
+    pub fn get_component_mut(&self, e: Entity) -> ComponentRefMut<C> {
         let idx = self.get_idx(e);
-        self.components.get(idx).unwrap().borrow_mut()
+        let mut comp_ref_mut = self.components.borrow_mut();
+        let comp = comp_ref_mut.get_mut(idx).unwrap();
+        ComponentRefMut::<C> { comp, comp_ref_mut }
     }
 
     fn get_idx(&self, e: Entity) -> usize {
@@ -100,11 +137,11 @@ impl ComponentManager {
         self.get_component_array_mut::<C>().remove_component(e);
     }
 
-    pub fn get_component<C: 'static>(&self, e: Entity) -> Ref<C> {
+    pub fn get_component<C: 'static>(&self, e: Entity) -> ComponentRef<C> {
         self.get_component_array::<C>().get_component(e)
     }
 
-    pub fn get_component_mut<C: 'static>(&self, e: Entity) -> RefMut<C> {
+    pub fn get_component_mut<C: 'static>(&self, e: Entity) -> ComponentRefMut<C> {
         self.get_component_array::<C>().get_component_mut(e)
     }
 
@@ -402,11 +439,11 @@ impl Ecs {
         self.system_manager.on_entity_signature_changed(e, &new_sig);
     }
 
-    pub fn get_component<C: 'static>(&self, e: Entity) -> Ref<C> {
+    pub fn get_component<C: 'static>(&self, e: Entity) -> ComponentRef<C> {
         self.component_manager.get_component(e)
     }
 
-    pub fn get_component_mut<C: 'static>(&self, e: Entity) -> RefMut<C> {
+    pub fn get_component_mut<C: 'static>(&self, e: Entity) -> ComponentRefMut<C> {
         self.component_manager.get_component_mut(e)
     }
 
@@ -415,7 +452,8 @@ impl Ecs {
     pub fn create_system_with_signature(&mut self, sig: Signature) -> SystemId {
         let sys_id = self.system_manager.create_system_with_signature(sig);
         for (ent, ent_sig) in &self.entity_manager.entity_to_signature {
-            self.system_manager.on_entity_signature_changed(*ent, ent_sig);
+            self.system_manager
+                .on_entity_signature_changed(*ent, ent_sig);
         }
         sys_id
     }
@@ -435,7 +473,8 @@ impl Ecs {
     pub fn set_system_signature(&mut self, s: SystemId, sig: Signature) {
         self.system_manager.set_signature(s, sig);
         for (ent, ent_sig) in &self.entity_manager.entity_to_signature {
-            self.system_manager.on_entity_signature_changed(*ent, ent_sig);
+            self.system_manager
+                .on_entity_signature_changed(*ent, ent_sig);
         }
     }
 
