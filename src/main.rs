@@ -27,9 +27,9 @@ fn main() {
     let phys_sys = {
         let mut phys_sig = Signature::new();
         phys_sig
-            .add_component::<Position>()
-            .add_component::<Velocity>()
-            .add_component::<Mass>();
+            .add::<Position>()
+            .add::<Velocity>()
+            .add::<Mass>();
         ecs.create_system_with_signature(phys_sig)
     };
 

@@ -151,18 +151,18 @@ impl Signature {
         }
     }
 
-    pub fn add_component<C: 'static>(&mut self) -> &mut Self {
+    pub fn add<C: 'static>(&mut self) -> &mut Self {
         let typeid = TypeId::of::<C>();
         self.components.insert(typeid);
         self
     }
 
-    pub fn remove_component<C: 'static>(&mut self) {
+    pub fn remove<C: 'static>(&mut self) {
         let typeid = TypeId::of::<C>();
         self.components.remove(&typeid);
     }
 
-    pub fn has_component<C: 'static>(&self) -> bool {
+    pub fn has<C: 'static>(&self) -> bool {
         let typeid = TypeId::of::<C>();
         self.components.contains(&typeid)
     }
@@ -199,6 +199,27 @@ impl EntityManager {
             .entity_to_signature
             .get_mut(&e)
             .expect("No such entity") = sig;
+    }
+
+    pub fn add_to_signature<T: 'static>(&mut self, e: Entity) {
+        self.entity_to_signature
+            .get_mut(&e)
+            .expect("No such entity")
+            .add::<T>();
+    }
+
+    pub fn remove_from_signature<T: 'static>(&mut self, e: Entity) {
+        self.entity_to_signature
+            .get_mut(&e)
+            .expect("No such entity")
+            .remove::<T>();
+    }
+
+    pub fn has_in_signature<T: 'static>(&self, e: Entity) {
+        self.entity_to_signature
+            .get(&e)
+            .expect("No such entity")
+            .has::<T>();
     }
 
     fn get_free_entity(&self) -> Entity {
@@ -242,7 +263,7 @@ impl System {
     }
 
     pub fn has_component<C: 'static>(&self) -> bool {
-        self.signature.has_component::<C>()
+        self.signature.has::<C>()
     }
 
     pub fn get_entities(&self) -> &Vec<Entity> {
