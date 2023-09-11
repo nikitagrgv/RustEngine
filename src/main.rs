@@ -51,10 +51,15 @@ fn main() {
     for _ in [0..10]
     {
         let phys_ents = ecs.get_system_entities(phys_sys);
+        println!("PHYS ENTS {:#?}", phys_ents);
         for &ent in phys_ents {
-            let pos = ecs.get_component_mut::<Position>(ent).deref_mut();
-            let vel = ecs.get_component_mut::<Velocity>(ent).deref_mut();
-            let mass = ecs.get_component_mut::<Mass>(ent).deref_mut();
+            let mut pos = ecs.get_component_mut::<Position>(ent);
+            let mut vel = ecs.get_component_mut::<Velocity>(ent);
+            let mut mass = ecs.get_component_mut::<Mass>(ent);
+
+            pos.0.x = pos.0.x + 1f32;
+
+            println!("ENTITY {:#?} - POS {:#?}", ent, pos.0.x);
         }
     }
 
