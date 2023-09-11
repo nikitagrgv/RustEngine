@@ -338,10 +338,6 @@ impl Ecs {
         self.entity_manager.get_signature(e)
     }
 
-    pub fn set_entity_signature(&mut self, e: Entity, sig: Signature) {
-        self.entity_manager.set_signature(e, sig);
-    }
-
     ////////////// Component
 
     pub fn register_component<C: 'static>(&mut self) -> &mut Self {
