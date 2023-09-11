@@ -2,6 +2,7 @@ mod ecs;
 mod math;
 mod utils;
 
+use std::ops::DerefMut;
 use crate::ecs::*;
 use crate::math::*;
 
@@ -51,10 +52,9 @@ fn main() {
     {
         let phys_ents = ecs.get_system_entities(phys_sys);
         for &ent in phys_ents {
-            // let pos = ecs.get_component_mut::<Position>(ent);
-            // let vel = ecs.get_component_mut::<Velocity>(ent);
-            // let mass = ecs.get_component_mut::<Mass>(ent);
-            // TODO: ^^^^^^^^^^^^^ this doesn't compiles!!!!!
+            let pos = ecs.get_component_mut::<Position>(ent).deref_mut();
+            let vel = ecs.get_component_mut::<Velocity>(ent).deref_mut();
+            let mass = ecs.get_component_mut::<Mass>(ent).deref_mut();
         }
     }
 

@@ -1,6 +1,6 @@
 use crate::utils::to_any::ToAny;
 use std::any::TypeId;
-use std::cell::{Ref, RefCell};
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{HashMap, HashSet};
 use std::ops::{Deref, DerefMut};
 
@@ -16,7 +16,7 @@ pub struct SystemId(usize);
 ///////////////////////////////////////
 
 pub struct ComponentArray<C> {
-    components: Vec<C>,
+    components: Vec<RefCell<C>>,
     entity_to_index: HashMap<Entity, usize>,
     // TODO: index_to_entity?
 }
@@ -32,21 +32,21 @@ impl<C: 'static> ComponentArray<C> {
     pub fn add_component(&mut self, e: Entity, comp: C) {
         assert!(!self.entity_to_index.contains_key(&e));
         self.entity_to_index.insert(e, self.components.len());
-        self.components.push(comp);
+        self.components.push(comp.into());
     }
 
     pub fn remove_component(&mut self, e: Entity) {
         todo!();
     }
 
-    pub fn get_component(&self, e: Entity) -> &C {
+    pub fn get_component(&self, e: Entity) -> Ref<C> {
         let idx = self.get_idx(e);
-        self.components.get(idx).unwrap()
+        self.components.get(idx).unwrap().borrow()
     }
 
-    pub fn get_component_mut(&mut self, e: Entity) -> &mut C {
+    pub fn get_component_mut(&self, e: Entity) -> RefMut<C> {
         let idx = self.get_idx(e);
-        self.components.get_mut(idx).unwrap()
+        self.components.get(idx).unwrap().borrow_mut()
     }
 
     fn get_idx(&self, e: Entity) -> usize {
@@ -99,12 +99,12 @@ impl ComponentManager {
         self.get_component_array_mut::<C>().remove_component(e);
     }
 
-    pub fn get_component<C: 'static>(&self, e: Entity) -> &C {
+    pub fn get_component<C: 'static>(&self, e: Entity) -> Ref<C> {
         self.get_component_array::<C>().get_component(e)
     }
 
-    pub fn get_component_mut<C: 'static>(&mut self, e: Entity) -> &mut C {
-        self.get_component_array_mut::<C>().get_component_mut(e)
+    pub fn get_component_mut<C: 'static>(&self, e: Entity) -> RefMut<C> {
+        self.get_component_array::<C>().get_component_mut(e)
     }
 
     pub fn on_entity_removed(&mut self, e: Entity) {
@@ -357,11 +357,11 @@ impl Ecs {
         self.component_manager.remove_component::<C>(e);
     }
 
-    pub fn get_component<C: 'static>(&self, e: Entity) -> &C {
+    pub fn get_component<C: 'static>(&self, e: Entity) -> Ref<C> {
         self.component_manager.get_component(e)
     }
 
-    pub fn get_component_mut<C: 'static>(&mut self, e: Entity) -> &mut C {
+    pub fn get_component_mut<C: 'static>(&self, e: Entity) -> RefMut<C> {
         self.component_manager.get_component_mut(e)
     }
 
