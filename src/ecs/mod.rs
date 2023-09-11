@@ -16,6 +16,7 @@ pub struct SystemId(usize);
 ///////////////////////////////////////
 
 pub struct ComponentArray<C> {
+    // TODO: RefCell<Vec> !
     components: Vec<RefCell<C>>,
     entity_to_index: HashMap<Entity, usize>,
     // TODO: index_to_entity?
