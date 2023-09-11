@@ -41,17 +41,17 @@ fn main() {
         e
     }
 
-    let e0 = ecs.create_entity();
-    let e1 = ecs.create_entity();
-    let e2 = ecs.create_entity();
-    let e3 = ecs.create_entity();
-    let e4 = ecs.create_entity();
+    let e0 = create_phys_entity(&mut ecs);
+    let e1 = create_phys_entity(&mut ecs);
+    let e2 = create_phys_entity(&mut ecs);
+    let e3 = create_phys_entity(&mut ecs);
+    let e4 = create_phys_entity(&mut ecs);
 
     // Using ecs
     for _ in [0..10]
     {
         let phys_ents = ecs.get_system_entities(phys_sys);
-        println!("PHYS ENTS {:#?}", phys_ents);
+        println!("PHYS ENTS {:?}", phys_ents);
         for &ent in phys_ents {
             let mut pos = ecs.get_component_mut::<Position>(ent);
             let mut vel = ecs.get_component_mut::<Velocity>(ent);
@@ -59,7 +59,7 @@ fn main() {
 
             pos.0.x = pos.0.x + 1f32;
 
-            println!("ENTITY {:#?} - POS {:#?}", ent, pos.0.x);
+            println!("ENTITY {:?} - POS {:?}", ent, pos.0.x);
         }
     }
 

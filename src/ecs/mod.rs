@@ -157,14 +157,19 @@ impl Signature {
         self
     }
 
-    pub fn remove<C: 'static>(&mut self) {
+    pub fn remove<C: 'static>(&mut self) -> &mut Self {
         let typeid = TypeId::of::<C>();
         self.components.remove(&typeid);
+        self
     }
 
     pub fn has<C: 'static>(&self) -> bool {
         let typeid = TypeId::of::<C>();
         self.components.contains(&typeid)
+    }
+
+    pub fn contains(&self, other: &Self) -> bool {
+        self.components.is_superset(&other.components)
     }
 }
 
@@ -201,18 +206,18 @@ impl EntityManager {
             .expect("No such entity") = sig;
     }
 
-    pub fn add_to_signature<T: 'static>(&mut self, e: Entity) {
+    pub fn add_to_signature<T: 'static>(&mut self, e: Entity) -> &Signature {
         self.entity_to_signature
             .get_mut(&e)
             .expect("No such entity")
-            .add::<T>();
+            .add::<T>()
     }
 
-    pub fn remove_from_signature<T: 'static>(&mut self, e: Entity) {
+    pub fn remove_from_signature<T: 'static>(&mut self, e: Entity) -> &Signature {
         self.entity_to_signature
             .get_mut(&e)
             .expect("No such entity")
-            .remove::<T>();
+            .remove::<T>()
     }
 
     pub fn has_in_signature<T: 'static>(&self, e: Entity) {
@@ -269,6 +274,17 @@ impl System {
     pub fn get_entities(&self) -> &Vec<Entity> {
         &self.entities
     }
+
+    pub fn on_entity_signature_changed(&mut self, e: Entity, sig: &Signature) {
+        // TODO: use binary search!
+        if self.signature.contains(sig) {
+            if !self.entities.contains(&e) {
+                self.entities.push(e);
+            }
+        } else {
+            self.entities.retain(|ent| e != e);
+        }
+    }
 }
 
 pub struct SystemManager {
@@ -309,6 +325,13 @@ impl SystemManager {
             .get_mut(&s)
             .expect("No such system")
             .set_signature(sig);
+    }
+
+    // TODO: use methods on_component_added and on_component_removed. Add them there and for System
+    pub fn on_entity_signature_changed(&mut self, e: Entity, sig: &Signature) {
+        for sys in self.id_to_system.values_mut() {
+            sys.on_entity_signature_changed(e, &sig);
+        }
     }
 
     pub fn get_entities(&self, s: SystemId) -> &Vec<Entity> {
@@ -368,10 +391,14 @@ impl Ecs {
 
     pub fn add_component<C: 'static>(&mut self, e: Entity, comp: C) {
         self.component_manager.add_component::<C>(e, comp);
+        let new_sig = self.entity_manager.add_to_signature::<C>(e);
+        self.system_manager.on_entity_signature_changed(e, &new_sig);
     }
 
     pub fn remove_component<C: 'static>(&mut self, e: Entity) {
         self.component_manager.remove_component::<C>(e);
+        let new_sig = self.entity_manager.remove_from_signature::<C>(e);
+        self.system_manager.on_entity_signature_changed(e, &new_sig);
     }
 
     pub fn get_component<C: 'static>(&self, e: Entity) -> Ref<C> {
@@ -385,7 +412,11 @@ impl Ecs {
     ////////////// System
 
     pub fn create_system_with_signature(&mut self, sig: Signature) -> SystemId {
-        self.system_manager.create_system_with_signature(sig)
+        let sys_id = self.system_manager.create_system_with_signature(sig);
+        for (ent, ent_sig) in &self.entity_manager.entity_to_signature {
+            self.system_manager.on_entity_signature_changed(*ent, ent_sig);
+        }
+        sys_id
     }
 
     pub fn create_system(&mut self) -> SystemId {
@@ -402,6 +433,9 @@ impl Ecs {
 
     pub fn set_system_signature(&mut self, s: SystemId, sig: Signature) {
         self.system_manager.set_signature(s, sig);
+        for (ent, ent_sig) in &self.entity_manager.entity_to_signature {
+            self.system_manager.on_entity_signature_changed(*ent, ent_sig);
+        }
     }
 
     pub fn get_system_entities(&self, s: SystemId) -> &Vec<Entity> {
