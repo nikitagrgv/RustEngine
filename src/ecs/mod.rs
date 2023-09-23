@@ -63,7 +63,11 @@ impl Ecs {
 
     pub fn register_component<T: 'static>(&mut self) {
         assert!(self.get_component_array::<T>().is_none());
-        let ca = Box::new(ComponentArrayTemplate::<T>::new());
+        let mut ca = Box::new(ComponentArrayTemplate::<T>::new());
+        for _ in 0..self.entities_count
+        {
+            ca.push_none();
+        }
         self.component_arrays.push(ca);
     }
 
