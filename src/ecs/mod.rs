@@ -1,3 +1,4 @@
+use crate::utils::to_any::ToAny;
 use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{HashMap, HashSet};
@@ -41,7 +42,8 @@ impl<T> ComponentArray for ComponentArrayTemplate<T> {
 
 pub struct Ecs {
     entities_count: usize,
-    component_arrays: Vec<Box<dyn ComponentArray>>,
+    // TODO: HashMap
+    component_arrays: Vec<RefCell<Box<dyn ComponentArray>>>,
 }
 
 impl Ecs {
@@ -56,7 +58,7 @@ impl Ecs {
         let ent_id = self.entities_count;
         self.entities_count += 1;
         for mut component_array in &mut self.component_arrays {
-            component_array.push_none();
+            component_array.borrow_mut().push_none();
         }
         Entity(ent_id)
     }
@@ -64,11 +66,10 @@ impl Ecs {
     pub fn register_component<T: 'static>(&mut self) {
         assert!(self.get_component_array::<T>().is_none());
         let mut ca = Box::new(ComponentArrayTemplate::<T>::new());
-        for _ in 0..self.entities_count
-        {
+        for _ in 0..self.entities_count {
             ca.push_none();
         }
-        self.component_arrays.push(ca);
+        self.component_arrays.push(RefCell::new(ca));
     }
 
     pub fn add_component<T: 'static>(&mut self, e: Entity, component: T) {
@@ -83,19 +84,45 @@ impl Ecs {
             .components[e.0] = None;
     }
 
-    pub fn get_component_array<T: 'static>(&self) -> Option<&ComponentArrayTemplate<T>> {
+    pub fn get_component_array<T: 'static>(&self) -> Option<Ref<ComponentArrayTemplate<T>>> {
+        // TODO: wtf is this shittttt?
         for c in self.component_arrays.iter() {
-            if let Some(g) = c.as_any().downcast_ref::<ComponentArrayTemplate<T>>() {
-                return Some(g);
+            let is_such = c
+                .deref()
+                .as_any()
+                .downcast_ref::<ComponentArrayTemplate<T>>()
+                .is_some();
+            let comp_ref = c.borrow();
+            if is_such {
+                let ret_ref = Ref::map(comp_ref, |comp| {
+                    comp.as_any()
+                        .downcast_ref::<ComponentArrayTemplate<T>>()
+                        .unwrap()
+                });
+                return Some(ret_ref);
             }
         }
         None
     }
 
-    pub fn get_component_array_mut<T: 'static>(&mut self) -> Option<&mut ComponentArrayTemplate<T>> {
-        for c in self.component_arrays.iter_mut() {
-            if let Some(g) = c.as_any_mut().downcast_mut::<ComponentArrayTemplate<T>>() {
-                return Some(g);
+    pub fn get_component_array_mut<T: 'static>(
+        &mut self,
+    ) -> Option<RefMut<ComponentArrayTemplate<T>>> {
+        // TODO: wtf is this shittttt?
+        for c in self.component_arrays.iter() {
+            let is_such = c
+                .deref()
+                .as_any()
+                .downcast_ref::<ComponentArrayTemplate<T>>()
+                .is_some();
+            let comp_ref = c.borrow_mut();
+            if is_such {
+                let ret_ref = RefMut::map(comp_ref, |comp| {
+                    comp.as_any_mut()
+                        .downcast_mut::<ComponentArrayTemplate<T>>()
+                        .unwrap()
+                });
+                return Some(ret_ref);
             }
         }
         None
