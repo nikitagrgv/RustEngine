@@ -82,8 +82,7 @@ fn main() {
     }
 
     let q = ecs.query::<Position>();
-    for a in q.iterate()
-    {
-
+    for a in q.iterate() {
+        println!("pos: {:#?}", a.0);
     }
 }

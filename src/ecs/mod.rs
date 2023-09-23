@@ -164,16 +164,24 @@ impl<'a, T: 'static> ComponentIterator<'a, T> {
 }
 
 impl<'a, T: 'a + 'static> Iterator for ComponentIterator<'a, T> {
-    type Item = &'a Option<T>;
+    type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let out = self
-            .query
-            .component_array_ref
-            .components
-            .get(self.cur_entity.0);
-        self.cur_entity.0 += 1;
-        out
+        let ca = &self.query.component_array_ref.components;
+        loop {
+            let comp = ca.get(self.cur_entity.0);
+            match comp {
+                None => {
+                    break None;
+                }
+                Some(comp) => {
+                    self.cur_entity.0 += 1;
+                    if let Some(comp) = comp {
+                        break Some(comp);
+                    }
+                }
+            }
+        }
     }
 }
 
