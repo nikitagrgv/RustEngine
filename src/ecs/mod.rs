@@ -1,5 +1,4 @@
-use crate::utils::to_any::ToAny;
-use std::any::TypeId;
+use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{HashMap, HashSet};
 use std::ops::{Deref, DerefMut};
@@ -8,4 +7,93 @@ use std::ops::{Deref, DerefMut};
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
 pub struct Entity(usize);
 
+trait ComponentArray {
+    fn push_none(&mut self);
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
 
+pub struct ComponentArrayTemplate<T: 'static> {
+    components: Vec<Option<T>>,
+}
+
+impl<T: 'static> ComponentArrayTemplate<T> {
+    pub fn new() -> Self {
+        Self {
+            components: Vec::new(),
+        }
+    }
+}
+
+impl<T> ComponentArray for ComponentArrayTemplate<T> {
+    fn push_none(&mut self) {
+        self.components.push(None);
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+pub struct Ecs {
+    entities_count: usize,
+    component_arrays: Vec<Box<dyn ComponentArray>>,
+}
+
+impl Ecs {
+    pub fn new() -> Self {
+        Self {
+            entities_count: 0,
+            component_arrays: Vec::new(),
+        }
+    }
+
+    pub fn create_entity(&mut self) -> Entity {
+        let ent_id = self.entities_count;
+        self.entities_count += 1;
+        for mut component_array in &mut self.component_arrays {
+            component_array.push_none();
+        }
+        Entity(ent_id)
+    }
+
+    pub fn register_component<T: 'static>(&mut self) {
+        assert!(self.get_component_array::<T>().is_none());
+        let ca = Box::new(ComponentArrayTemplate::<T>::new());
+        self.component_arrays.push(ca);
+    }
+
+    pub fn add_component<T: 'static>(&mut self, e: Entity, component: T) {
+        self.get_component_array_mut::<T>()
+            .expect("Component is not registered")
+            .components[e.0] = Some(component);
+    }
+
+    pub fn remove_component<T: 'static>(&mut self, e: Entity, component: T) {
+        self.get_component_array_mut::<T>()
+            .expect("Component is not registered")
+            .components[e.0] = None;
+    }
+
+    pub fn get_component_array<T: 'static>(&self) -> Option<&ComponentArrayTemplate<T>> {
+        for c in self.component_arrays.iter() {
+            if let Some(g) = c.as_any().downcast_ref::<ComponentArrayTemplate<T>>() {
+                return Some(g);
+            }
+        }
+        None
+    }
+
+    pub fn get_component_array_mut<T: 'static>(&mut self) -> Option<&mut ComponentArrayTemplate<T>> {
+        for c in self.component_arrays.iter_mut() {
+            if let Some(g) = c.as_any_mut().downcast_mut::<ComponentArrayTemplate<T>>() {
+                return Some(g);
+            }
+        }
+        None
+    }
+}
