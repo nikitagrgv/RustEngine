@@ -8,13 +8,13 @@ use crate::utils::combo_iterator::*;
 use std::collections::HashMap;
 use std::iter::Zip;
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 struct Position(Vec3f);
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 struct Mass(f32);
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 struct Velocity(Vec3f);
 
 // use bevy::prelude::{*};
@@ -83,6 +83,6 @@ fn main() {
 
     let q = ecs.query::<Position>();
     for a in q.iterate() {
-        println!("pos: {:#?}", a.0);
+        println!("ent: {:?} | pos: {:?}", a.0, a.1);
     }
 }
