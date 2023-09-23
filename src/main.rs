@@ -8,7 +8,6 @@ use crate::utils::combo_iterator::*;
 use std::collections::HashMap;
 use std::iter::Zip;
 
-
 #[derive(Clone, Copy, Default)]
 struct Position(Vec3f);
 
@@ -32,8 +31,8 @@ struct Velocity(Vec3f);
 //     fn fetch() -> Self::Item;
 // }
 
-use std::cell::RefCell;
 use std::cell::Ref;
+use std::cell::RefCell;
 use std::cell::RefMut;
 // use core::cell::RefCell;
 use bevy::prelude::Reflect;
@@ -47,15 +46,44 @@ struct St {
 
 fn gett(c: &RefCell<St>) -> RefMut<G> {
     let r = c.borrow_mut();
-    let ff = std::cell::RefMut::map(r, |a: &mut St| { &mut a.val });
+    let ff = std::cell::RefMut::map(r, |a: &mut St| &mut a.val);
     ff
 }
 
 fn main() {
-    let s = RefCell::new(St { val: G(123) });
-    let mut a = gett(&s);
+    let mut ecs = Ecs::new();
 
-    // s.borrow_mut();
+    ecs.register_component::<Position>();
+    ecs.register_component::<Mass>();
 
-    // println!("aa");
+    {
+        let e = ecs.create_entity();
+        ecs.add_component(Position::default(), e);
+    }
+    {
+        let e = ecs.create_entity();
+        ecs.add_component(Position::default(), e);
+    }
+    {
+        let e = ecs.create_entity();
+        ecs.add_component(Position::default(), e);
+    }
+    {
+        let e = ecs.create_entity();
+        ecs.add_component(Position::default(), e);
+    }
+    {
+        let e = ecs.create_entity();
+        ecs.add_component(Position::default(), e);
+    }
+    {
+        let e = ecs.create_entity();
+        ecs.add_component(Position::default(), e);
+    }
+
+    let q = ecs.query::<Position>();
+    for a in q.iterate()
+    {
+
+    }
 }
