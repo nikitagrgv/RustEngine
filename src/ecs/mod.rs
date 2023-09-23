@@ -105,9 +105,7 @@ impl Ecs {
         None
     }
 
-    pub fn get_component_array_mut<T: 'static>(
-        &mut self,
-    ) -> Option<RefMut<ComponentArrayTemplate<T>>> {
+    pub fn get_component_array_mut<T: 'static>(&self) -> Option<RefMut<ComponentArrayTemplate<T>>> {
         // TODO: wtf is this shittttt?
         for c in self.component_arrays.iter() {
             let is_such = c
