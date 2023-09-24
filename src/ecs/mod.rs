@@ -1,4 +1,3 @@
-use bevy::prelude::Query;
 use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{HashMap, HashSet};
@@ -137,10 +136,32 @@ impl Ecs {
     //     }
     // }
 
-    pub fn query2<'a, T0: 'static, T1: 'static>(&'a self) -> Query2<'a, T0, T1> {
+    pub fn query<'a, T: ComponentsTuple>(&'a self) -> T::Query<'a> {
+        T::query(self)
+    }
+
+    // pub fn query2<'a, T0: 'static, T1: 'static>(&'a self) -> Query2<'a, T0, T1> {
+    //     Query2 {
+    //         comp_arr_ref_0: self.get_component_array().unwrap(),
+    //         comp_arr_ref_1: self.get_component_array().unwrap(),
+    //     }
+    // }
+}
+
+pub trait ComponentsTuple {
+    type Tuple<'a>;
+    type Query<'a>;
+    fn query<'a>(ecs: &'a Ecs) -> Self::Query<'a>;
+}
+
+impl<T0: 'static, T1: 'static> ComponentsTuple for (T0, T1) {
+    type Tuple<'a> = (&'a T0, &'a T1);
+    type Query<'a> = Query2<'a, T0, T1>;
+
+    fn query<'a>(ecs: &'a Ecs) -> Self::Query<'a> {
         Query2 {
-            comp_arr_ref_0: self.get_component_array().unwrap(),
-            comp_arr_ref_1: self.get_component_array().unwrap(),
+            comp_arr_ref_0: ecs.get_component_array().unwrap(),
+            comp_arr_ref_1: ecs.get_component_array().unwrap(),
         }
     }
 }

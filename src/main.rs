@@ -82,7 +82,7 @@ fn main() {
         ecs.add_component(Position::default(), e);
     }
 
-    let q = ecs.query2::<Position, Mass>();
+    let q = ecs.query::<(Position, Mass)>();
     for comps in q.iter()
     {
         println!("ent: {:?}| pos: {:?} | mass: {:?}", comps.0, comps.1, comps.2);
