@@ -1,3 +1,4 @@
+use bevy::prelude::Query;
 use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{HashMap, HashSet};
@@ -128,14 +129,75 @@ impl Ecs {
         None
     }
 
-    // pub fn query<T: 'static>(&self) -> Query<T> {
-    //     Query::new(self.get_component_array().unwrap())
+    // pub fn iter2<T0: 'static, T1: 'static>(&self) -> ComponentIterator2<T0, T1> {
+    //     ComponentIterator2 {
+    //         cur_ent: Entity(0),
+    //         comp_arr_ref_0: self.get_component_array().unwrap(),
+    //         comp_arr_ref_1: self.get_component_array().unwrap(),
+    //     }
     // }
+
+    pub fn query2<'a, T0: 'static, T1: 'static>(&'a self) -> Query2<'a, T0, T1> {
+        Query2 {
+            comp_arr_ref_0: self.get_component_array().unwrap(),
+            comp_arr_ref_1: self.get_component_array().unwrap(),
+        }
+    }
 }
 
+pub struct Query2<'a, T0: 'static, T1: 'static> {
+    comp_arr_ref_0: Ref<'a, ComponentArrayTemplate<T0>>,
+    comp_arr_ref_1: Ref<'a, ComponentArrayTemplate<T1>>,
+}
 
+impl<'a, T0: 'static, T1: 'static> Query2<'a, T0, T1> {
+    pub fn iter(&'a self) -> ComponentIterator2<'a, T0, T1> {
+        ComponentIterator2 {
+            query: self,
+            cur_ent: Entity(0),
+        }
+    }
+}
 
+pub struct ComponentIterator2<'a, T0: 'static, T1: 'static> {
+    query: &'a Query2<'a, T0, T1>,
+    cur_ent: Entity,
+}
 
+impl<'a, T0: 'a + 'static, T1: 'a + 'static> Iterator for ComponentIterator2<'a, T0, T1> {
+    type Item = (Entity, &'a T0, &'a T1);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let query = self.query;
+        debug_assert_eq!(
+            query.comp_arr_ref_0.components.len(),
+            query.comp_arr_ref_1.components.len()
+        );
+        let len = query.comp_arr_ref_1.components.len();
+        loop {
+            let cur_ent = self.cur_ent;
+            let cur_ent_idx = self.cur_ent.0;
+
+            // End of the components
+            if (cur_ent_idx >= len) {
+                break None;
+            }
+
+            self.cur_ent.0 += 1;
+
+            // SAFETY: we was checked bounds already
+            let c0 = unsafe { query.comp_arr_ref_0.components.get_unchecked(cur_ent_idx) };
+            let c1 = unsafe { query.comp_arr_ref_1.components.get_unchecked(cur_ent_idx) };
+
+            match (c0, c1) {
+                (Some(c0), Some(c1)) => {
+                    break Some((cur_ent, c0, c1));
+                }
+                _ => {}
+            }
+        }
+    }
+}
 
 //
 // pub struct ComponentFetch<'a, T: 'static> {
@@ -187,8 +249,6 @@ impl Ecs {
 //         todo!()
 //     }
 // }
-
-
 
 // impl<'a, T: 'static> Query<'a, T> {
 //     pub fn new(component_array_ref: Ref<'a, ComponentArrayTemplate<T>>) -> Self {
