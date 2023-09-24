@@ -63,26 +63,27 @@ fn main() {
     {
         let e = ecs.create_entity();
         ecs.add_component(Position::default(), e);
+        ecs.add_component(Mass::default(), e);
+    }
+    {
+        let e = ecs.create_entity();
+        ecs.add_component(Mass::default(), e);
     }
     {
         let e = ecs.create_entity();
         ecs.add_component(Position::default(), e);
+        ecs.add_component(Mass::default(), e);
     }
     {
         let e = ecs.create_entity();
-        ecs.add_component(Position::default(), e);
-    }
-    {
-        let e = ecs.create_entity();
-        ecs.add_component(Position::default(), e);
     }
     {
         let e = ecs.create_entity();
         ecs.add_component(Position::default(), e);
     }
 
-    let q = ecs.query::<Position>();
-    for a in q.iterate() {
-        println!("ent: {:?} | pos: {:?}", a.0, a.1);
-    }
+    // let q = ecs.query::<Position>();
+    // for a in q.iterate() {
+    //     println!("ent: {:?} | pos: {:?}", a.0, a.1);
+    // }
 }

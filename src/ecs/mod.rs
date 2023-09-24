@@ -128,62 +128,115 @@ impl Ecs {
         None
     }
 
-    pub fn query<T: 'static>(&self) -> Query<T> {
-        Query::new(self.get_component_array().unwrap())
-    }
+    // pub fn query<T: 'static>(&self) -> Query<T> {
+    //     Query::new(self.get_component_array().unwrap())
+    // }
 }
 
-pub struct Query<'a, T: 'static> {
-    component_array_ref: Ref<'a, ComponentArrayTemplate<T>>,
-}
 
-impl<'a, T: 'static> Query<'a, T> {
-    pub fn new(component_array_ref: Ref<'a, ComponentArrayTemplate<T>>) -> Self {
-        Self {
-            component_array_ref,
-        }
-    }
 
-    pub fn iterate(&'a self) -> ComponentIterator<'a, T> {
-        ComponentIterator::new(self)
-    }
-}
 
-pub struct ComponentIterator<'a, T: 'a + 'static> {
-    query: &'a Query<'a, T>,
-    cur_entity: Entity,
-}
 
-impl<'a, T: 'static> ComponentIterator<'a, T> {
-    pub fn new(query: &'a Query<'a, T>) -> Self {
-        Self {
-            query,
-            cur_entity: Entity(0),
-        }
-    }
-}
+//
+// pub struct ComponentFetch<'a, T: 'static> {
+//     component_array_ref: Ref<'a, ComponentArrayTemplate<T>>,
+// }
+//
+// pub trait Query {
+//     type Item<'a>;
+//     type Fetch<'a>;
+//
+//     fn fetch<'w>(fetch: &'w mut Self::Fetch<'w>, e: Entity) -> Self::Item<'w>;
+// }
+//
+// pub trait Component: 'static {}
+//
+// impl<T: 'static> Component for T {}
+//
+// impl<T: Component> Query for T {
+//     type Item<'a> = &'a Option<T>;
+//     type Fetch<'a> = ComponentFetch<'a, T>;
+//
+//     fn fetch<'w>(fetch: &'w mut Self::Fetch<'w>, e: Entity) -> Self::Item<'w> {
+//         fetch.component_array_ref.components.get(e.0).unwrap()
+//     }
+// }
+//
+// pub struct ComponentIterator<'a, T: Component + Query> {
+//     fetch: T::Fetch<'a>,
+//     cur_ent: Entity,
+// }
+//
+// impl<'a, T: Component + Query> ComponentIterator<'a, T> {
+//     pub fn new(fetch: T::Fetch<'a>) -> Self {
+//         Self {
+//             fetch,
+//             cur_ent: Entity(0),
+//         }
+//     }
+// }
+//
+// impl<'a, T: Component + Query> Iterator for ComponentIterator<'a, T> {
+//     type Item = T::Item<'a>;
+//
+//     fn next(&mut self) -> Option<Self::Item> {
+//         let cur_ent = self.cur_ent;
+//         self.cur_ent.0 += 1;
+//         let g = &self.fetch;
+//         g.
+//         todo!()
+//     }
+// }
 
-impl<'a, T: 'a + 'static> Iterator for ComponentIterator<'a, T> {
-    type Item = (Entity, &'a T);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let ca = &self.query.component_array_ref.components;
-        loop {
-            let cur_entity = self.cur_entity;
-            self.cur_entity.0 += 1;
-            let comp = ca.get(cur_entity.0);
-            match comp {
-                None => {
-                    break None;
-                }
-                Some(Some(comp)) => {
-                    break Some((cur_entity, comp));
-                }
-                Some(None) => {}
-            }
-        }
-    }
-}
+
+// impl<'a, T: 'static> Query<'a, T> {
+//     pub fn new(component_array_ref: Ref<'a, ComponentArrayTemplate<T>>) -> Self {
+//         Self {
+//             component_array_ref,
+//         }
+//     }
+//
+//     pub fn iterate(&'a self) -> ComponentIterator<'a, T> {
+//         ComponentIterator::new(self)
+//     }
+// }
+//
+// pub struct ComponentIterator<'a, T: 'a + 'static> {
+//     query: &'a Query<'a, T>,
+//     cur_entity: Entity,
+// }
+//
+// impl<'a, T: 'static> ComponentIterator<'a, T> {
+//     pub fn new(query: &'a Query<'a, T>) -> Self {
+//         Self {
+//             query,
+//             cur_entity: Entity(0),
+//         }
+//     }
+// }
+//
+// impl<'a, T: 'a + 'static> Iterator for ComponentIterator<'a, T> {
+//     type Item = (Entity, &'a T);
+//
+//     fn next(&mut self) -> Option<Self::Item> {
+//         let ca = &self.query.component_array_ref.components;
+//         loop {
+//             let cur_entity = self.cur_entity;
+//             self.cur_entity.0 += 1;
+//             let comp = ca.get(cur_entity.0);
+//             match comp {
+//                 None => {
+//                     break None;
+//                 }
+//                 Some(Some(comp)) => {
+//                     break Some((cur_entity, comp));
+//                 }
+//                 Some(None) => {}
+//             }
+//         }
+//     }
+// }
 
 // pub struct Fetch<'a, T: 'static>
 // {
