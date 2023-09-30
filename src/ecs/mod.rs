@@ -1,5 +1,7 @@
+use bevy::ecs::query::Has;
+use bevy::render::render_resource::encase::internal::{BufferMut, WriteInto, Writer};
 use std::any::{Any, TypeId};
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::{Ref, RefCell, RefMut, UnsafeCell};
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut, Index};
@@ -8,17 +10,36 @@ use std::ops::{Deref, DerefMut, Index};
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
 pub struct Entity(usize);
 
+impl Entity {
+    fn from_num(num: usize) -> Self {
+        Self(num)
+    }
+    fn to_num(&self) -> usize {
+        self.0
+    }
+}
+
+pub trait Component: 'static {
+    fn get_type_id() -> TypeId;
+}
+
+impl<T: 'static> Component for T {
+    fn get_type_id() -> TypeId {
+        TypeId::of::<T>()
+    }
+}
+
 trait ComponentArray {
     fn push_none(&mut self);
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-pub struct ComponentArrayTemplate<T: 'static> {
-    components: Vec<Option<T>>,
+pub struct ComponentArrayT<T: Component> {
+    components: Vec<UnsafeCell<Option<T>>>,
 }
 
-impl<T: 'static> ComponentArrayTemplate<T> {
+impl<T: Component> ComponentArrayT<T> {
     pub fn new() -> Self {
         Self {
             components: Vec::new(),
@@ -26,9 +47,9 @@ impl<T: 'static> ComponentArrayTemplate<T> {
     }
 }
 
-impl<T> ComponentArray for ComponentArrayTemplate<T> {
+impl<T: Component> ComponentArray for ComponentArrayT<T> {
     fn push_none(&mut self) {
-        self.components.push(None);
+        self.components.push(None.into());
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -40,92 +61,68 @@ impl<T> ComponentArray for ComponentArrayTemplate<T> {
     }
 }
 
-pub struct Ecs {
+pub struct World {
     entities_count: usize,
-    // TODO: HashMap
-    component_arrays: Vec<RefCell<Box<dyn ComponentArray>>>,
+    component_arrays: HashMap<TypeId, Box<dyn ComponentArray>>,
 }
 
-impl Ecs {
+impl World {
     pub fn new() -> Self {
         Self {
             entities_count: 0,
-            component_arrays: Vec::new(),
+            component_arrays: HashMap::new(),
         }
     }
 
     pub fn create_entity(&mut self) -> Entity {
-        let ent_id = self.entities_count;
+        let entity = Entity::from_num(self.entities_count);
         self.entities_count += 1;
-        for component_array in &mut self.component_arrays {
-            component_array.borrow_mut().push_none();
+        for component_array in self.component_arrays.values_mut() {
+            component_array.push_none();
         }
-        Entity(ent_id)
+        entity
     }
 
-    pub fn register_component<T: 'static>(&mut self) {
-        assert!(self.get_component_array::<T>().is_none());
-        let mut ca = Box::new(ComponentArrayTemplate::<T>::new());
+    pub fn register_component<T: Component>(&mut self) {
+        let type_id = T::get_type_id();
+        assert!(
+            self.component_arrays.get(&type_id).is_none(),
+            "Already registered"
+        );
+        let mut component_array = ComponentArrayT::<T>::new();
         for _ in 0..self.entities_count {
-            ca.push_none();
+            component_array.push_none();
         }
-        self.component_arrays.push(RefCell::new(ca));
+        self.component_arrays
+            .insert(type_id, Box::new(component_array));
     }
 
-    pub fn add_component<T: 'static>(&mut self, component: T, e: Entity) {
+    pub fn add_component<T: Component>(&mut self, component: T, e: Entity) {
         self.get_component_array_mut::<T>()
             .expect("Component is not registered")
-            .components[e.0] = Some(component);
+            .components[e.to_num()] = Some(component).into();
     }
 
-    pub fn remove_component<T: 'static>(&mut self, component: T, e: Entity) {
+    pub fn remove_component<T: Component>(&mut self, component: T, e: Entity) {
         self.get_component_array_mut::<T>()
             .expect("Component is not registered")
-            .components[e.0] = None;
+            .components[e.to_num()] = None.into();
     }
 
-    pub fn get_component_array<T: 'static>(&self) -> Option<Ref<ComponentArrayTemplate<T>>> {
-        // TODO: wtf is this shittttt?
-        for c in self.component_arrays.iter() {
-            let is_such = c
-                .borrow()
-                .deref()
-                .as_any()
-                .downcast_ref::<ComponentArrayTemplate<T>>()
-                .is_some();
-            let comp_ref = c.borrow();
-            if is_such {
-                let ret_ref = Ref::map(comp_ref, |comp| {
-                    comp.as_any()
-                        .downcast_ref::<ComponentArrayTemplate<T>>()
-                        .unwrap()
-                });
-                return Some(ret_ref);
-            }
-        }
-        None
+    pub fn get_component_array<T: Component>(&self) -> Option<&ComponentArrayT<T>> {
+        let type_id = T::get_type_id();
+        self.component_arrays
+            .get(&type_id)?
+            .as_any()
+            .downcast_ref::<ComponentArrayT<T>>()
     }
 
-    pub fn get_component_array_mut<T: 'static>(&self) -> Option<RefMut<ComponentArrayTemplate<T>>> {
-        // TODO: wtf is this shittttt?
-        for c in self.component_arrays.iter() {
-            let is_such = c
-                .borrow()
-                .deref()
-                .as_any()
-                .downcast_ref::<ComponentArrayTemplate<T>>()
-                .is_some();
-            let comp_ref = c.borrow_mut();
-            if is_such {
-                let ret_ref = RefMut::map(comp_ref, |comp| {
-                    comp.as_any_mut()
-                        .downcast_mut::<ComponentArrayTemplate<T>>()
-                        .unwrap()
-                });
-                return Some(ret_ref);
-            }
-        }
-        None
+    pub fn get_component_array_mut<T: Component>(&mut self) -> Option<&mut ComponentArrayT<T>> {
+        let type_id = T::get_type_id();
+        self.component_arrays
+            .get_mut(&type_id)?
+            .as_any_mut()
+            .downcast_mut::<ComponentArrayT<T>>()
     }
 
     // pub fn iter2<T0: 'static, T1: 'static>(&self) -> ComponentIterator2<T0, T1> {
@@ -135,11 +132,9 @@ impl Ecs {
     //         comp_arr_ref_1: self.get_component_array().unwrap(),
     //     }
     // }
-
-    pub fn query<'a, T: ComponentsTuple>(&'a self) -> T::Query<'a> {
-        T::query(self)
-    }
-
+    // pub fn query<'a, T: ComponentsTuple>(&'a self) -> T::Query<'a> {
+    //     T::query(self)
+    // }
     // pub fn query2<'a, T0: 'static, T1: 'static>(&'a self) -> Query2<'a, T0, T1> {
     //     Query2 {
     //         comp_arr_ref_0: self.get_component_array().unwrap(),
@@ -148,81 +143,92 @@ impl Ecs {
     // }
 }
 
-pub trait ComponentsTuple {
-    type Tuple<'a>;
-    type Query<'a>;
-    fn query<'a>(ecs: &'a Ecs) -> Self::Query<'a>;
-}
+// pub trait ComponentsTuple {
+//     type RefsTuple<'a>;
+//     type Query<'a>;
+//     type ComponentArraysRefsTuple<'a>;
+//
+//     fn query<'a>(ecs: &'a Ecs) -> Self::Query<'a>;
+// }
+//
+// impl<T0: 'static, T1: 'static> ComponentsTuple for (T0, T1) {
+//     type RefsTuple<'a> = (&'a T0, &'a T1);
+//     type Query<'a> = Query<'a, Self::ComponentArraysRefsTuple<'a>>;
+//     type ComponentArraysRefsTuple<'a> = (
+//         Ref<'a, ComponentArrayT<T0>>,
+//         Ref<'a, ComponentArrayT<T1>>,
+//     );
+//
+//     fn query<'a>(ecs: &'a Ecs) -> Self::Query<'a> {
+//         Query2 {
+//             comp_arr_refs: (
+//                 ecs.get_component_array().unwrap(),
+//                 ecs.get_component_array().unwrap(),
+//             ),
+//         }
+//     }
+// }
+//
+// pub struct Query<'a, T: ComponentsTuple> {
+//     comp_arr_refs: T::ComponentArraysRefsTuple<'a>,
+// }
 
-impl<T0: 'static, T1: 'static> ComponentsTuple for (T0, T1) {
-    type Tuple<'a> = (&'a T0, &'a T1);
-    type Query<'a> = Query2<'a, T0, T1>;
+// impl<'a, T: ComponentsTuple> Query<'a, T> {
+//     pub fn
+// }
 
-    fn query<'a>(ecs: &'a Ecs) -> Self::Query<'a> {
-        Query2 {
-            comp_arr_ref_0: ecs.get_component_array().unwrap(),
-            comp_arr_ref_1: ecs.get_component_array().unwrap(),
-        }
-    }
-}
+// impl<'a, T0: 'static, T1: 'static> Query2<'a, T0, T1> {
+//     pub fn iter(&'a self) -> ComponentIterator2<'a, T0, T1> {
+//         ComponentIterator2 {
+//             query: self,
+//             cur_ent: Entity(0),
+//         }
+//     }
+// }
 
-pub struct Query2<'a, T0: 'static, T1: 'static> {
-    comp_arr_ref_0: Ref<'a, ComponentArrayTemplate<T0>>,
-    comp_arr_ref_1: Ref<'a, ComponentArrayTemplate<T1>>,
-}
-
-impl<'a, T0: 'static, T1: 'static> Query2<'a, T0, T1> {
-    pub fn iter(&'a self) -> ComponentIterator2<'a, T0, T1> {
-        ComponentIterator2 {
-            query: self,
-            cur_ent: Entity(0),
-        }
-    }
-}
-
-pub struct ComponentIterator2<'a, T0: 'static, T1: 'static> {
-    query: &'a Query2<'a, T0, T1>,
-    cur_ent: Entity,
-}
-
-impl<'a, T0: 'a + 'static, T1: 'a + 'static> Iterator for ComponentIterator2<'a, T0, T1> {
-    type Item = (Entity, &'a T0, &'a T1);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let query = self.query;
-        debug_assert_eq!(
-            query.comp_arr_ref_0.components.len(),
-            query.comp_arr_ref_1.components.len()
-        );
-        let len = query.comp_arr_ref_1.components.len();
-        loop {
-            let cur_ent = self.cur_ent;
-            let cur_ent_idx = self.cur_ent.0;
-
-            // End of the components
-            if (cur_ent_idx >= len) {
-                break None;
-            }
-
-            self.cur_ent.0 += 1;
-
-            // SAFETY: we was checked bounds already
-            let c0 = unsafe { query.comp_arr_ref_0.components.get_unchecked(cur_ent_idx) };
-            let c1 = unsafe { query.comp_arr_ref_1.components.get_unchecked(cur_ent_idx) };
-
-            match (c0, c1) {
-                (Some(c0), Some(c1)) => {
-                    break Some((cur_ent, c0, c1));
-                }
-                _ => {}
-            }
-        }
-    }
-}
+// pub struct ComponentIterator2<'a, T0: 'static, T1: 'static> {
+//     query: &'a Query2<'a, T0, T1>,
+//     cur_ent: Entity,
+// }
+//
+// impl<'a, T0: 'a + 'static, T1: 'a + 'static> Iterator for ComponentIterator2<'a, T0, T1> {
+//     type Item = (Entity, &'a T0, &'a T1);
+//
+//     fn next(&mut self) -> Option<Self::Item> {
+//         let query = self.query;
+//         debug_assert_eq!(
+//             query.comp_arr_ref_0.components.len(),
+//             query.comp_arr_ref_1.components.len()
+//         );
+//         let len = query.comp_arr_ref_1.components.len();
+//         loop {
+//             let cur_ent = self.cur_ent;
+//             let cur_ent_idx = self.cur_ent.0;
+//
+//             // End of the components
+//             if (cur_ent_idx >= len) {
+//                 break None;
+//             }
+//
+//             self.cur_ent.0 += 1;
+//
+//             // SAFETY: we was checked bounds already
+//             let c0 = unsafe { query.comp_arr_ref_0.components.get_unchecked(cur_ent_idx) };
+//             let c1 = unsafe { query.comp_arr_ref_1.components.get_unchecked(cur_ent_idx) };
+//
+//             match (c0, c1) {
+//                 (Some(c0), Some(c1)) => {
+//                     break Some((cur_ent, c0, c1));
+//                 }
+//                 _ => {}
+//             }
+//         }
+//     }
+// }
 
 //
 // pub struct ComponentFetch<'a, T: 'static> {
-//     component_array_ref: Ref<'a, ComponentArrayTemplate<T>>,
+//     component_array_ref: Ref<'a, ComponentArrayT<T>>,
 // }
 //
 // pub trait Query {
@@ -272,7 +278,7 @@ impl<'a, T0: 'a + 'static, T1: 'a + 'static> Iterator for ComponentIterator2<'a,
 // }
 
 // impl<'a, T: 'static> Query<'a, T> {
-//     pub fn new(component_array_ref: Ref<'a, ComponentArrayTemplate<T>>) -> Self {
+//     pub fn new(component_array_ref: Ref<'a, ComponentArrayT<T>>) -> Self {
 //         Self {
 //             component_array_ref,
 //         }
@@ -321,7 +327,7 @@ impl<'a, T0: 'a + 'static, T1: 'a + 'static> Iterator for ComponentIterator2<'a,
 
 // pub struct Fetch<'a, T: 'static>
 // {
-//     component_array: &'a ComponentArrayTemplate<T>,
+//     component_array: &'a ComponentArrayT<T>,
 // }
 //
 //
@@ -336,7 +342,7 @@ impl<'a, T0: 'a + 'static, T1: 'a + 'static> Iterator for ComponentIterator2<'a,
 // }
 //
 // impl<'a, T: 'static> Fetch<'a> for (T, ) {
-//     type ComponentArrays = Ref<'a, ComponentArrayTemplate<T>>;
+//     type ComponentArrays = Ref<'a, ComponentArrayT<T>>;
 //     type Items = T;
 //
 //     fn init_fetch(ecs: &Ecs) -> Self::ComponentArrays {

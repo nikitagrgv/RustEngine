@@ -51,45 +51,53 @@ fn gett(c: &RefCell<St>) -> RefMut<G> {
 }
 
 fn main() {
-    let mut ecs = Ecs::new();
+    let mut world = World::new();
+    world.register_component::<Position>();
+    world.register_component::<Mass>();
 
-    ecs.register_component::<Position>();
-    ecs.register_component::<Mass>();
+    world.get_component_array::<Position>().unwrap();
+    world.get_component_array::<Mass>().unwrap();
+    world.get_component_array::<Velocity>().unwrap();
 
-    {
-        let e = ecs.create_entity();
-        ecs.add_component(Position::default(), e);
-    }
-    {
-        let e = ecs.create_entity();
-        ecs.add_component(Position::default(), e);
-        ecs.add_component(Mass::default(), e);
-    }
-    {
-        let e = ecs.create_entity();
-        ecs.add_component(Mass::default(), e);
-    }
-    {
-        let e = ecs.create_entity();
-        ecs.add_component(Position::default(), e);
-        ecs.add_component(Mass::default(), e);
-    }
-    {
-        let e = ecs.create_entity();
-    }
-    {
-        let e = ecs.create_entity();
-        ecs.add_component(Position::default(), e);
-    }
-
-    let q = ecs.query::<(Position, Mass)>();
-    for comps in q.iter()
-    {
-        println!("ent: {:?}| pos: {:?} | mass: {:?}", comps.0, comps.1, comps.2);
-    }
-
-    // let q = ecs.query::<Position>();
-    // for a in q.iterate() {
-    //     println!("ent: {:?} | pos: {:?}", a.0, a.1);
+    // let mut ecs = Ecs::new();
+    //
+    // ecs.register_component::<Position>();
+    // ecs.register_component::<Mass>();
+    //
+    // {
+    //     let e = ecs.create_entity();
+    //     ecs.add_component(Position::default(), e);
     // }
+    // {
+    //     let e = ecs.create_entity();
+    //     ecs.add_component(Position::default(), e);
+    //     ecs.add_component(Mass::default(), e);
+    // }
+    // {
+    //     let e = ecs.create_entity();
+    //     ecs.add_component(Mass::default(), e);
+    // }
+    // {
+    //     let e = ecs.create_entity();
+    //     ecs.add_component(Position::default(), e);
+    //     ecs.add_component(Mass::default(), e);
+    // }
+    // {
+    //     let e = ecs.create_entity();
+    // }
+    // {
+    //     let e = ecs.create_entity();
+    //     ecs.add_component(Position::default(), e);
+    // }
+    //
+    // // let q = ecs.query::<(Position, Mass)>();
+    // // for comps in q.iter()
+    // // {
+    // //     println!("ent: {:?}| pos: {:?} | mass: {:?}", comps.0, comps.1, comps.2);
+    // // }
+    //
+    // // let q = ecs.query::<Position>();
+    // // for a in q.iterate() {
+    // //     println!("ent: {:?} | pos: {:?}", a.0, a.1);
+    // // }
 }
