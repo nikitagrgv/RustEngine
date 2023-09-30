@@ -125,6 +125,10 @@ impl World {
             .downcast_mut::<ComponentArrayT<T>>()
     }
 
+    pub fn query_mut<T: Fetcherable>(&mut self) -> Query<T> {
+        Query::<T>::new(self)
+    }
+
     // pub fn iter2<T0: 'static, T1: 'static>(&self) -> ComponentIterator2<T0, T1> {
     //     ComponentIterator2 {
     //         cur_ent: Entity(0),
@@ -141,6 +145,56 @@ impl World {
     //         comp_arr_ref_1: self.get_component_array().unwrap(),
     //     }
     // }
+}
+
+// trait QuerySubject {}
+//
+// impl<T: Component> QuerySubject for T {}
+
+pub struct Query<'w, T: Fetcherable> {
+    // world: &'w mut World,
+    fetch: T::Fetch<'w>,
+}
+
+impl<'w, T: Fetcherable> Query<'w, T> {
+    fn new(world: &'w mut World) -> Self {
+        let fetch = T::fetch_init(world);
+        Self { fetch }
+    }
+}
+
+pub trait Fetcherable {
+    type Item<'w>;
+    type Fetch<'w>;
+
+    fn fetch_init<'w>(world: &'w mut World) -> Self::Fetch<'w>;
+    fn fetch_next<'w>(fetch: &'w mut Self::Fetch<'w>) -> Self::Item<'w>;
+}
+
+impl<T: Component> Fetcherable for &T {
+    type Item<'w> = &'w T;
+    type Fetch<'w> = &'w ComponentArrayT<T>;
+
+    fn fetch_init<'w>(world: &'w mut World) -> Self::Fetch<'w> {
+        todo!()
+    }
+
+    fn fetch_next<'w>(fetch: &'w mut Self::Fetch<'w>) -> Self::Item<'w> {
+        todo!()
+    }
+}
+
+impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
+    type Item<'w> = (T0::Item<'w>, T1::Item<'w>);
+    type Fetch<'w> = (T0::Fetch<'w>, T1::Fetch<'w>);
+
+    fn fetch_init<'w>(world: &'w mut World) -> Self::Fetch<'w> {
+        todo!()
+    }
+
+    fn fetch_next<'w>(fetch: &'w mut Self::Fetch<'w>) -> Self::Item<'w> {
+        todo!()
+    }
 }
 
 // pub trait ComponentsTuple {

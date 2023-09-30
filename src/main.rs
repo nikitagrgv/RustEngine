@@ -57,7 +57,10 @@ fn main() {
 
     world.get_component_array::<Position>().unwrap();
     world.get_component_array::<Mass>().unwrap();
-    world.get_component_array::<Velocity>().unwrap();
+    // world.get_component_array::<Velocity>().unwrap();
+
+
+    world.query_mut::<&Position>();
 
     // let mut ecs = Ecs::new();
     //
