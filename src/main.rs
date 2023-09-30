@@ -52,16 +52,17 @@ fn gett(c: &RefCell<St>) -> RefMut<G> {
 
 fn main() {
     let mut world = World::new();
+    let e = world.create_entity();
+
     world.register_component::<Position>();
     world.register_component::<Mass>();
 
-    world.get_component_array::<Position>().unwrap();
-    world.get_component_array::<Mass>().unwrap();
-    // world.get_component_array::<Velocity>().unwrap();
+    world.add_component(Position::default(), e);
+    world.add_component(Mass::default(), e);
 
 
-    world.query_mut::<&Position>();
-
+    let mut q = world.query_mut::<(&Position, &Mass)>();
+    q.fetch_entity(e).unwrap();
     // let mut ecs = Ecs::new();
     //
     // ecs.register_component::<Position>();

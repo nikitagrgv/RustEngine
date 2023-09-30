@@ -1,4 +1,5 @@
 use bevy::ecs::query::Has;
+use bevy::ptr::UnsafeCellDeref;
 use bevy::render::render_resource::encase::internal::{BufferMut, WriteInto, Writer};
 use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell, RefMut, UnsafeCell};
@@ -153,13 +154,17 @@ impl World {
 
 pub struct Query<'w, T: Fetcherable> {
     // world: &'w mut World,
-    fetch: T::Fetch<'w>,
+    pub fetch: T::Fetch<'w>,
 }
 
 impl<'w, T: Fetcherable> Query<'w, T> {
-    fn new(world: &'w mut World) -> Self {
+    pub fn new(world: &'w World) -> Self {
         let fetch = T::fetch_init(world);
         Self { fetch }
+    }
+
+    pub fn fetch_entity(&'w mut self, entity: Entity) -> Option<T::Item<'w>> {
+        T::fetch_entity(&mut self.fetch, entity)
     }
 }
 
@@ -167,20 +172,28 @@ pub trait Fetcherable {
     type Item<'w>;
     type Fetch<'w>;
 
-    fn fetch_init<'w>(world: &'w mut World) -> Self::Fetch<'w>;
-    fn fetch_next<'w>(fetch: &'w mut Self::Fetch<'w>) -> Self::Item<'w>;
+    fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w>;
+    fn fetch_entity<'w>(fetch: &'w mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'w>>;
 }
 
 impl<T: Component> Fetcherable for &T {
     type Item<'w> = &'w T;
     type Fetch<'w> = &'w ComponentArrayT<T>;
 
-    fn fetch_init<'w>(world: &'w mut World) -> Self::Fetch<'w> {
-        todo!()
+    fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w> {
+        world.get_component_array::<T>().unwrap()
     }
 
-    fn fetch_next<'w>(fetch: &'w mut Self::Fetch<'w>) -> Self::Item<'w> {
-        todo!()
+    fn fetch_entity<'w>(fetch: &'w mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'w>> {
+        // TODO# safe!!!!
+        // Some(fetch.components.get(entity.to_num())?.deref())
+        let cell = fetch.components.get(entity.to_num())?;
+        unsafe {
+            match cell.deref() {
+                None => None,
+                Some(opt) => Some(opt),
+            }
+        }
     }
 }
 
@@ -188,14 +201,34 @@ impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
     type Item<'w> = (T0::Item<'w>, T1::Item<'w>);
     type Fetch<'w> = (T0::Fetch<'w>, T1::Fetch<'w>);
 
-    fn fetch_init<'w>(world: &'w mut World) -> Self::Fetch<'w> {
-        todo!()
+    fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w> {
+        (T0::fetch_init(world), T1::fetch_init(world))
     }
 
-    fn fetch_next<'w>(fetch: &'w mut Self::Fetch<'w>) -> Self::Item<'w> {
-        todo!()
+    fn fetch_entity<'w>(fetch: &'w mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'w>> {
+        let item = match (
+            T0::fetch_entity(&mut fetch.0, entity),
+            T1::fetch_entity(&mut fetch.1, entity),
+        ) {
+            (Some(t0), Some(t1)) => Some((t0, t1)),
+            (_, _) => None,
+        };
+        return item;
     }
 }
+
+// impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
+//     type Item<'w> = (T0::Item<'w>, T1::Item<'w>);
+//     type Fetch<'w> = (T0::Fetch<'w>, T1::Fetch<'w>);
+//
+//     fn fetch_init<'w>(world: &'w mut World) -> Self::Fetch<'w> {
+//         todo!()
+//     }
+//
+//     fn fetch_entity<'w>(fetch: &'w mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'w>> {
+//         todo!()
+//     }
+// }
 
 // pub trait ComponentsTuple {
 //     type RefsTuple<'a>;
