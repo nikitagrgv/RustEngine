@@ -4,18 +4,33 @@ mod utils;
 
 use crate::ecs::*;
 use crate::math::*;
-use crate::utils::combo_iterator::*;
-use std::collections::HashMap;
-use std::iter::Zip;
 
 #[derive(Clone, Copy, Default, Debug)]
 struct Position(Vec3f);
 
+impl Position {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self(Vec3f::new(x, y, z))
+    }
+}
+
 #[derive(Clone, Copy, Default, Debug)]
 struct Mass(f32);
 
+impl Mass {
+    pub fn new(mass: f32) -> Self {
+        Self(mass)
+    }
+}
+
 #[derive(Clone, Copy, Default, Debug)]
 struct Velocity(Vec3f);
+
+impl Velocity {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self(Vec3f::new(x, y, z))
+    }
+}
 
 // use bevy::prelude::{*};
 // fn greet_people(query: Query<&Name, With<Person>>) {
@@ -31,77 +46,27 @@ struct Velocity(Vec3f);
 //     fn fetch() -> Self::Item;
 // }
 
-use std::cell::Ref;
-use std::cell::RefCell;
-use std::cell::RefMut;
-// use core::cell::RefCell;
-use bevy::prelude::Reflect;
-use bevy::utils::tracing::instrument::WithSubscriber;
-
-struct G(pub i32);
-
-struct St {
-    pub val: G,
-}
-
-fn gett(c: &RefCell<St>) -> RefMut<G> {
-    let r = c.borrow_mut();
-    let ff = std::cell::RefMut::map(r, |a: &mut St| &mut a.val);
-    ff
-}
-
 fn main() {
     let mut world = World::new();
-    let e = world.create_entity();
-
     world.register_component::<Position>();
     world.register_component::<Mass>();
 
-    world.add_component(Position::default(), e);
-    world.add_component(Mass::default(), e);
+    let e0 = world.create_entity();
+    let e1 = world.create_entity();
 
+    world.add_component(Position::new(1.0, 2.0, 3.0), e0);
+    world.add_component(Mass::new(4.0), e0);
+
+    world.add_component(Position::new(7.0, 8.0, 9.0), e1);
+    world.add_component(Mass::new(10.0), e1);
 
     let mut q = world.query_mut::<(&Position, &Mass)>();
-    q.fetch_entity(e).unwrap();
-    // let mut ecs = Ecs::new();
-    //
-    // ecs.register_component::<Position>();
-    // ecs.register_component::<Mass>();
-    //
-    // {
-    //     let e = ecs.create_entity();
-    //     ecs.add_component(Position::default(), e);
-    // }
-    // {
-    //     let e = ecs.create_entity();
-    //     ecs.add_component(Position::default(), e);
-    //     ecs.add_component(Mass::default(), e);
-    // }
-    // {
-    //     let e = ecs.create_entity();
-    //     ecs.add_component(Mass::default(), e);
-    // }
-    // {
-    //     let e = ecs.create_entity();
-    //     ecs.add_component(Position::default(), e);
-    //     ecs.add_component(Mass::default(), e);
-    // }
-    // {
-    //     let e = ecs.create_entity();
-    // }
-    // {
-    //     let e = ecs.create_entity();
-    //     ecs.add_component(Position::default(), e);
-    // }
-    //
-    // // let q = ecs.query::<(Position, Mass)>();
-    // // for comps in q.iter()
-    // // {
-    // //     println!("ent: {:?}| pos: {:?} | mass: {:?}", comps.0, comps.1, comps.2);
-    // // }
-    //
-    // // let q = ecs.query::<Position>();
-    // // for a in q.iterate() {
-    // //     println!("ent: {:?} | pos: {:?}", a.0, a.1);
-    // // }
+    if let Some(comps) = q.fetch_entity(e0) {
+        println!("{:#?}", comps);
+    }
+    if let Some(comps) = q.fetch_entity(e1) {
+        println!("{:#?}", comps);
+    }
+
+
 }
