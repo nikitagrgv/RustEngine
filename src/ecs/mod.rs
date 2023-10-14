@@ -97,7 +97,7 @@ impl World {
 
     pub fn add_component<T: Component>(&mut self, component: T, e: Entity) {
         unsafe {
-            self.get_component_array_mut::<T>()
+            self.get_component_array::<T>()
                 .expect("Component is not registered")
                 .components
                 .deref_mut()[e.to_num()] = Some(component).into();
@@ -106,7 +106,7 @@ impl World {
 
     pub fn remove_component<T: Component>(&mut self, component: T, e: Entity) {
         unsafe {
-            self.get_component_array_mut::<T>()
+            self.get_component_array::<T>()
                 .expect("Component is not registered")
                 .components
                 .deref_mut()[e.to_num()] = None.into();
@@ -119,14 +119,6 @@ impl World {
             .get(&type_id)?
             .as_any()
             .downcast_ref::<ComponentArrayT<T>>()
-    }
-
-    pub fn get_component_array_mut<T: Component>(&mut self) -> Option<&mut ComponentArrayT<T>> {
-        let type_id = T::get_type_id();
-        self.component_arrays
-            .get_mut(&type_id)?
-            .as_any_mut()
-            .downcast_mut::<ComponentArrayT<T>>()
     }
 
     pub fn query<'w, T: Fetcherable>(&'w self) -> Query<'w, T> {
@@ -149,16 +141,16 @@ impl<'w, T: Fetcherable> Query<'w, T> {
         T::fetch_entity(&self.fetch, entity)
     }
 
-    pub fn fetch_entity_mut<'q>(&'q mut self, entity: Entity) -> FetchResult<T::ItemMut<'q>> {
-        T::fetch_entity_mut(&mut self.fetch, entity)
+    pub fn fetch_entity_mut<'q>(&'q self, entity: Entity) -> FetchResult<T::ItemMut<'q>> {
+        T::fetch_entity_mut(&self.fetch, entity)
     }
 
     pub fn iter<'q>(&'q self) -> QueryIter<'q, 'w, T> {
         QueryIter::<'q, 'w, T>::new(self)
     }
-    // pub fn iter_mut<'q>(&'q mut self) -> QueryIter<'q, 'w, T> {
-    //     QueryIterMut::<'q, 'w, T>::new(self)
-    // }
+    pub fn iter_mut<'q>(&'q mut self) -> QueryIterMut<'q, 'w, T> {
+        QueryIterMut::<'q, 'w, T>::new(self)
+    }
 }
 
 pub struct QueryIter<'q, 'w: 'q, T: Fetcherable> {
@@ -196,40 +188,42 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T> {
     }
 }
 
-// pub struct QueryIterMut<'q, 'w: 'q, T: Fetcherable> {
-//     query: &'q Query<'w, T>,
-//     cur_entity: Entity,
-// }
-//
-// impl<'q, 'w: 'q, T: Fetcherable> QueryIterMut<'q, 'w, T> {
-//     pub fn new(query: &'q Query<'w, T>) -> Self {
-//         Self {
-//             query,
-//             cur_entity: Entity::from_num(0),
-//         }
-//     }
-// }
-//
-// impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterMut<'q, 'w, T> {
-//     type Item = T::Item<'q>;
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         let mut cur_entity = self.cur_entity;
-//         let next = loop {
-//             match self.query.fetch_entity(cur_entity) {
-//                 FetchResult::Some(c) => {
-//                     break Some(c);
-//                 }
-//                 FetchResult::None => cur_entity.0 += 1,
-//                 FetchResult::End => {
-//                     break None;
-//                 }
-//             }
-//         };
-//         self.cur_entity.0 += 1;
-//         next
-//     }
-// }
+pub struct QueryIterMut<'q, 'w: 'q, T: Fetcherable> {
+    query: &'q Query<'w, T>,
+    cur_entity: Entity,
+    marker: PhantomData<&'q mut Query<'w, T>>
+}
+
+impl<'q, 'w: 'q, T: Fetcherable> QueryIterMut<'q, 'w, T> {
+    pub fn new(query: &'q Query<'w, T>) -> Self {
+        Self {
+            query,
+            cur_entity: Entity::from_num(0),
+            marker: PhantomData
+        }
+    }
+}
+
+impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterMut<'q, 'w, T> {
+    type Item = T::ItemMut<'q>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut cur_entity = self.cur_entity;
+        let next = loop {
+            match self.query.fetch_entity_mut(cur_entity) {
+                FetchResult::Some(c) => {
+                    break Some(c);
+                }
+                FetchResult::None => cur_entity.0 += 1,
+                FetchResult::End => {
+                    break None;
+                }
+            }
+        };
+        self.cur_entity.0 += 1;
+        next
+    }
+}
 
 pub enum FetchResult<T> {
     Some(T),
@@ -250,7 +244,7 @@ pub trait Fetcherable {
     ) -> FetchResult<Self::Item<'f>>;
 
     fn fetch_entity_mut<'f, 'w: 'f>(
-        fetch: &'f mut Self::Fetch<'w>,
+        fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::ItemMut<'f>>;
 }
@@ -280,7 +274,7 @@ impl<T: Component> Fetcherable for &T {
     }
 
     fn fetch_entity_mut<'f, 'w: 'f>(
-        fetch: &'f mut Self::Fetch<'w>,
+        fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::ItemMut<'f>> {
         let comp_vec = unsafe { fetch.components.deref_mut() };
@@ -318,12 +312,12 @@ impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
     }
 
     fn fetch_entity_mut<'f, 'w: 'f>(
-        fetch: &'f mut Self::Fetch<'w>,
+        fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::ItemMut<'f>> {
         match (
-            T0::fetch_entity_mut(&mut fetch.0, entity),
-            T1::fetch_entity_mut(&mut fetch.1, entity),
+            T0::fetch_entity_mut(&fetch.0, entity),
+            T1::fetch_entity_mut(&fetch.1, entity),
         ) {
             (FetchResult::Some(t0), FetchResult::Some(t1)) => FetchResult::Some((t0, t1)),
             (FetchResult::None, FetchResult::None) => FetchResult::None,

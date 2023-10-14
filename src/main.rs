@@ -4,6 +4,7 @@ mod utils;
 
 use std::marker::PhantomData;
 use bevy::reflect::List;
+use bevy::utils::HashMap;
 use crate::ecs::*;
 use crate::math::*;
 
@@ -121,11 +122,32 @@ fn main() {
         println!("FOUND FOR e2");
     }
 
+    // let qit = q.iter();
+    // for a in qit
+    // {
+    //     println!("Afafafa: {:?}", a);
+    // }
+
+    let qitm = q.iter_mut();
+    for a in qitm
+    {
+        a.0.0.x = 111111f32;
+    }
+
+    let qitm = q.iter_mut();
+    for a in qitm
+    {
+        a.0.0.x = 161111f32;
+    }
+
+
     let qit = q.iter();
     for a in qit
     {
         println!("Afafafa: {:?}", a);
     }
+    // let mm = HashMap::<i32,i32>::new();
+    // mm.iter_mut()
 
     // fff(&mut q, e0);
     // fff(&mut q, e1);
