@@ -150,30 +150,30 @@ impl<'w, T: Fetcherable> Query<'w, T> {
     }
 
     // TODO: iter mut
-    pub fn iter<'q>(&'q self) -> QueryIter<'q, 'w, T> {
+    pub fn iter<'q>(&'q mut self) -> QueryIter<'q, 'w, T> {
         QueryIter::<'q, 'w, T>::new(self)
     }
 }
 
 pub struct QueryIter<'q, 'w: 'q, T: Fetcherable> {
-    query: &'q Query<'w, T>,
+    query: &'q mut Query<'w, T>,
     cur_entity: Entity,
 }
 
 impl<'q, 'w : 'q, T: Fetcherable> QueryIter<'q, 'w, T> {
-    pub fn new(query: &'q Query<'w, T>) -> Self {
+    pub fn new(query: &'q mut Query<'w, T>) -> Self {
         Self { query, cur_entity: Entity::from_num(0) }
     }
 }
 
 impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T>
 {
-    type Item = (T::Item<'q>);
+    type Item = (T::Item<'w>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let cur_entity = self.cur_entity;
         self.cur_entity.0 += 1;
-        self.query.fetch_entity(cur_entity)
+        self.query.fetch_entity(cur_entity) // TODO: !!!!!!!!! for all size, not until first None!
     }
 }
 
