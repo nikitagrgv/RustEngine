@@ -108,7 +108,7 @@ fn main() {
 
     world.create_entity();
 
-    let mut q = world.query::<(&Position, &Mass)>();
+    let mut q = world.query::<(&mut Position, &Mass)>();
     if let FetchResult::Some(cmps) = q.fetch_entity(e0)
     {
         println!("FOUND FOR e0");

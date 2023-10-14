@@ -249,8 +249,45 @@ pub trait Fetcherable {
     ) -> FetchResult<Self::ItemMut<'f>>;
 }
 
-// for &mut T
 impl<T: Component> Fetcherable for &T {
+    type Item<'w> = &'w T;
+    type ItemMut<'w> = &'w T;
+    type Fetch<'w> = &'w ComponentArrayT<T>;
+
+    fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w> {
+        world.get_component_array::<T>().unwrap()
+    }
+
+    fn fetch_entity<'f, 'w: 'f>(
+        fetch: &'f Self::Fetch<'w>,
+        entity: Entity,
+    ) -> FetchResult<Self::Item<'f>> {
+        let comp_vec = unsafe { fetch.components.deref() };
+        match comp_vec.get(entity.to_num()) {
+            None => FetchResult::End,
+            Some(comp) => match comp {
+                None => FetchResult::None,
+                Some(comp) => FetchResult::Some(comp),
+            },
+        }
+    }
+
+    fn fetch_entity_mut<'f, 'w: 'f>(
+        fetch: &'f Self::Fetch<'w>,
+        entity: Entity,
+    ) -> FetchResult<Self::ItemMut<'f>> {
+        let comp_vec = unsafe { fetch.components.deref_mut() };
+        match comp_vec.get_mut(entity.to_num()) {
+            None => FetchResult::End,
+            Some(comp) => match comp {
+                None => FetchResult::None,
+                Some(comp) => FetchResult::Some(comp),
+            },
+        }
+    }
+}
+
+impl<T: Component> Fetcherable for &mut T {
     type Item<'w> = &'w T;
     type ItemMut<'w> = &'w mut T;
     type Fetch<'w> = &'w ComponentArrayT<T>;
