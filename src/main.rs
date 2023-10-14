@@ -124,9 +124,8 @@ fn main() {
     let qit = q.iter();
     for a in qit
     {
-        println!("Afafafa: {:#?}", a);
+        println!("Afafafa: {:?}", a);
     }
-
 
     // fff(&mut q, e0);
     // fff(&mut q, e1);

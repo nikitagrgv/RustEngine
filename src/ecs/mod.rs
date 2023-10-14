@@ -153,10 +153,12 @@ impl<'w, T: Fetcherable> Query<'w, T> {
         T::fetch_entity_mut(&mut self.fetch, entity)
     }
 
-    // TODO: iter mut
     pub fn iter<'q>(&'q self) -> QueryIter<'q, 'w, T> {
         QueryIter::<'q, 'w, T>::new(self)
     }
+    // pub fn iter_mut<'q>(&'q mut self) -> QueryIter<'q, 'w, T> {
+    //     QueryIterMut::<'q, 'w, T>::new(self)
+    // }
 }
 
 pub struct QueryIter<'q, 'w: 'q, T: Fetcherable> {
@@ -178,19 +180,56 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut cur_entity = self.cur_entity;
-        loop {
+        let next = loop {
             match self.query.fetch_entity(cur_entity) {
                 FetchResult::Some(c) => {
                     break Some(c);
                 }
                 FetchResult::None => cur_entity.0 += 1,
                 FetchResult::End => {
-                    return None;
+                    break None;
                 }
             }
-        }
+        };
+        self.cur_entity.0 += 1;
+        next
     }
 }
+
+// pub struct QueryIterMut<'q, 'w: 'q, T: Fetcherable> {
+//     query: &'q Query<'w, T>,
+//     cur_entity: Entity,
+// }
+//
+// impl<'q, 'w: 'q, T: Fetcherable> QueryIterMut<'q, 'w, T> {
+//     pub fn new(query: &'q Query<'w, T>) -> Self {
+//         Self {
+//             query,
+//             cur_entity: Entity::from_num(0),
+//         }
+//     }
+// }
+//
+// impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterMut<'q, 'w, T> {
+//     type Item = T::Item<'q>;
+//
+//     fn next(&mut self) -> Option<Self::Item> {
+//         let mut cur_entity = self.cur_entity;
+//         let next = loop {
+//             match self.query.fetch_entity(cur_entity) {
+//                 FetchResult::Some(c) => {
+//                     break Some(c);
+//                 }
+//                 FetchResult::None => cur_entity.0 += 1,
+//                 FetchResult::End => {
+//                     break None;
+//                 }
+//             }
+//         };
+//         self.cur_entity.0 += 1;
+//         next
+//     }
+// }
 
 pub enum FetchResult<T> {
     Some(T),
