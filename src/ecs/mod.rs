@@ -149,7 +149,7 @@ pub trait Fetcherable {
     type Fetch<'w>;
 
     fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w>;
-    fn fetch_entity<'a, 'w: 'a>(fetch: &'a mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'a>>;
+    fn fetch_entity<'f, 'w: 'f>(fetch: &'f mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'f>>;
 }
 
 impl<T: Component> Fetcherable for &T {
@@ -160,7 +160,7 @@ impl<T: Component> Fetcherable for &T {
         world.get_component_array::<T>().unwrap()
     }
 
-    fn fetch_entity<'a, 'w: 'a>(fetch: &'a mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'a>> {
+    fn fetch_entity<'f, 'w: 'f>(fetch: &'f mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'f>> {
         // TODO# safe!!!!
         // Some(fetch.components.get(entity.to_num())?.deref())
         let cell = fetch.components.get(entity.to_num())?;
@@ -181,7 +181,7 @@ impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
         (T0::fetch_init(world), T1::fetch_init(world))
     }
 
-    fn fetch_entity<'a, 'w: 'a>(fetch: &'a mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'a>> {
+    fn fetch_entity<'f, 'w: 'f>(fetch: &'f mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'f>> {
         let item = match (
             T0::fetch_entity(&mut fetch.0, entity),
             T1::fetch_entity(&mut fetch.1, entity),

@@ -70,6 +70,7 @@ fn main() {
 
     let e0 = world.create_entity();
     let e1 = world.create_entity();
+    let e2 = world.create_entity();
 
     world.add_component(Position::new(1.0, 2.0, 3.0), e0);
     world.add_component(Mass::new(4.0), e0);
@@ -77,6 +78,8 @@ fn main() {
     world.add_component(Position::new(7.0, 8.0, 9.0), e1);
     world.add_component(Mass::new(10.0), e1);
 
+    // world.add_component(Position::new(7.0, 8.0, 9.0), e2);
+    world.add_component(Mass::new(10.0), e2);
 
     // fn fff<'a, 'w: 'a>(q: &'a mut Query<'w, (&Position)>, e: Entity) {
     //     q.fetch_entity(e);
@@ -87,18 +90,19 @@ fn main() {
     // fff(&mut q, e0);
     //
 
-    fn fff<'a, 'w: 'a>(q: &'a mut Query<'w, (&Position, &Mass)>, e: Entity) {
-        q.fetch_entity(e);
-    }
-
     let mut q = world.query::<(&Position, &Mass)>();
-    fff(&mut q, e0);
-
-
-
-    fff(&mut q, e0);
-    q.fetch_entity(e0);
-    q.fetch_entity(e1);
+    if let Some(cmps) = q.fetch_entity(e0)
+    {
+        println!("FOUND FOR e0");
+    }
+    if let Some(cmps) = q.fetch_entity(e1)
+    {
+        println!("FOUND FOR e1");
+    }
+    if let Some(cmps) = q.fetch_entity(e2)
+    {
+        println!("FOUND FOR e2");
+    }
 
 
     // fff(&mut q, e0);
