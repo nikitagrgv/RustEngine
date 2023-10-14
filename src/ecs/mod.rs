@@ -34,20 +34,20 @@ trait ComponentArray {
 }
 
 pub struct ComponentArrayT<T: Component> {
-    components: Vec<UnsafeCell<Option<T>>>,
+    components: UnsafeCell<Vec<Option<T>>>,
 }
 
 impl<T: Component> ComponentArrayT<T> {
     pub fn new() -> Self {
         Self {
-            components: Vec::new(),
+            components: UnsafeCell::new(Vec::new()),
         }
     }
 }
 
 impl<T: Component> ComponentArray for ComponentArrayT<T> {
     fn push_none(&mut self) {
-        self.components.push(None.into());
+        self.components.get_mut().push(None);
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -96,15 +96,23 @@ impl World {
     }
 
     pub fn add_component<T: Component>(&mut self, component: T, e: Entity) {
-        self.get_component_array_mut::<T>()
-            .expect("Component is not registered")
-            .components[e.to_num()] = Some(component).into();
+        unsafe {
+            self.get_component_array_mut::<T>()
+                .expect("Component is not registered")
+                .components
+                .deref_mut()
+                [e.to_num()] = Some(component).into();
+        }
     }
 
     pub fn remove_component<T: Component>(&mut self, component: T, e: Entity) {
-        self.get_component_array_mut::<T>()
-            .expect("Component is not registered")
-            .components[e.to_num()] = None.into();
+        unsafe {
+            self.get_component_array_mut::<T>()
+                .expect("Component is not registered")
+                .components
+                .deref_mut()
+                [e.to_num()] = None.into();
+        }
     }
 
     pub fn get_component_array<T: Component>(&self) -> Option<&ComponentArrayT<T>> {
@@ -163,12 +171,12 @@ impl<T: Component> Fetcherable for &T {
     fn fetch_entity<'f, 'w: 'f>(fetch: &'f mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'f>> {
         // TODO# safe!!!!
         // Some(fetch.components.get(entity.to_num())?.deref())
-        let cell = fetch.components.get(entity.to_num())?;
-        unsafe {
-            match cell.deref() {
-                None => None,
-                Some(opt) => Some(opt),
-            }
+
+        let comp_vec = unsafe { fetch.components.deref() };
+        let comp = comp_vec.get(entity.to_num())?;
+        match comp {
+            None => None,
+            Some(comp) => Some(comp)
         }
     }
 }

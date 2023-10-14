@@ -104,6 +104,22 @@ fn main() {
         println!("FOUND FOR e2");
     }
 
+    world.create_entity();
+
+    let mut q = world.query::<(&Position, &Mass)>();
+    if let Some(cmps) = q.fetch_entity(e0)
+    {
+        println!("FOUND FOR e0");
+    }
+    if let Some(cmps) = q.fetch_entity(e1)
+    {
+        println!("FOUND FOR e1");
+    }
+    if let Some(cmps) = q.fetch_entity(e2)
+    {
+        println!("FOUND FOR e2");
+    }
+
 
     // fff(&mut q, e0);
     // fff(&mut q, e1);
