@@ -79,7 +79,7 @@ fn main() {
     world.add_component(Mass::new(10.0), e1);
 
     // world.add_component(Position::new(7.0, 8.0, 9.0), e2);
-    world.add_component(Mass::new(10.0), e2);
+    world.add_component(Mass::new(110.0), e2);
 
     // fn fff<'a, 'w: 'a>(q: &'a mut Query<'w, (&Position)>, e: Entity) {
     //     q.fetch_entity(e);
@@ -118,6 +118,12 @@ fn main() {
     if let Some(cmps) = q.fetch_entity(e2)
     {
         println!("FOUND FOR e2");
+    }
+
+    let qit = q.iter();
+    for a in qit
+    {
+        println!("Afafafa: {:#?}", a);
     }
 
 

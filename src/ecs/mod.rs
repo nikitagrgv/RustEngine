@@ -100,8 +100,7 @@ impl World {
             self.get_component_array_mut::<T>()
                 .expect("Component is not registered")
                 .components
-                .deref_mut()
-                [e.to_num()] = Some(component).into();
+                .deref_mut()[e.to_num()] = Some(component).into();
         }
     }
 
@@ -110,8 +109,7 @@ impl World {
             self.get_component_array_mut::<T>()
                 .expect("Component is not registered")
                 .components
-                .deref_mut()
-                [e.to_num()] = None.into();
+                .deref_mut()[e.to_num()] = None.into();
         }
     }
 
@@ -150,14 +148,45 @@ impl<'w, T: Fetcherable> Query<'w, T> {
     pub fn fetch_entity<'q>(&'q mut self, entity: Entity) -> Option<T::Item<'q>> {
         T::fetch_entity(&mut self.fetch, entity)
     }
+
+    // TODO: iter mut
+    pub fn iter<'q>(&'q self) -> QueryIter<'q, 'w, T> {
+        QueryIter::<'q, 'w, T>::new(self)
+    }
 }
+
+pub struct QueryIter<'q, 'w: 'q, T: Fetcherable> {
+    query: &'q Query<'w, T>,
+    cur_entity: Entity,
+}
+
+impl<'q, 'w : 'q, T: Fetcherable> QueryIter<'q, 'w, T> {
+    pub fn new(query: &'q Query<'w, T>) -> Self {
+        Self { query, cur_entity: Entity::from_num(0) }
+    }
+}
+
+impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T>
+{
+    type Item = (T::Item<'q>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let cur_entity = self.cur_entity;
+        self.cur_entity.0 += 1;
+        self.query.fetch_entity(cur_entity)
+    }
+}
+
 
 pub trait Fetcherable {
     type Item<'w>;
     type Fetch<'w>;
 
     fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w>;
-    fn fetch_entity<'f, 'w: 'f>(fetch: &'f mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'f>>;
+    fn fetch_entity<'f, 'w: 'f>(
+        fetch: &'f mut Self::Fetch<'w>,
+        entity: Entity,
+    ) -> Option<Self::Item<'f>>;
 }
 
 impl<T: Component> Fetcherable for &T {
@@ -168,7 +197,10 @@ impl<T: Component> Fetcherable for &T {
         world.get_component_array::<T>().unwrap()
     }
 
-    fn fetch_entity<'f, 'w: 'f>(fetch: &'f mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'f>> {
+    fn fetch_entity<'f, 'w: 'f>(
+        fetch: &'f mut Self::Fetch<'w>,
+        entity: Entity,
+    ) -> Option<Self::Item<'f>> {
         // TODO# safe!!!!
         // Some(fetch.components.get(entity.to_num())?.deref())
 
@@ -176,7 +208,7 @@ impl<T: Component> Fetcherable for &T {
         let comp = comp_vec.get(entity.to_num())?;
         match comp {
             None => None,
-            Some(comp) => Some(comp)
+            Some(comp) => Some(comp),
         }
     }
 }
@@ -189,7 +221,10 @@ impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
         (T0::fetch_init(world), T1::fetch_init(world))
     }
 
-    fn fetch_entity<'f, 'w: 'f>(fetch: &'f mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'f>> {
+    fn fetch_entity<'f, 'w: 'f>(
+        fetch: &'f mut Self::Fetch<'w>,
+        entity: Entity,
+    ) -> Option<Self::Item<'f>> {
         let item = match (
             T0::fetch_entity(&mut fetch.0, entity),
             T1::fetch_entity(&mut fetch.1, entity),
@@ -200,12 +235,6 @@ impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
         return item;
     }
 }
-
-
-
-
-
-
 
 // impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
 //     type Item<'w> = (T0::Item<'w>, T1::Item<'w>);
