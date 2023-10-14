@@ -1,8 +1,10 @@
 use bevy::ptr::UnsafeCellDeref;
 use std::any::{Any, TypeId};
-use std::cell::{Ref, RefCell, RefMut, UnsafeCell};
+use std::cell::{Cell, Ref, RefCell, RefMut, UnsafeCell};
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
+use std::ops::{Deref, DerefMut};
+use std::ptr::NonNull;
 
 /// Entity is just id. You can assign components to Entity
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
@@ -33,19 +35,185 @@ trait ComponentArray {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-pub struct ComponentArrayT<T: Component> {
-    components: UnsafeCell<Vec<Option<T>>>,
+type BorrowFlag = isize;
+const UNUSED: BorrowFlag = 0;
+fn is_writing(x: BorrowFlag) -> bool {
+    x < UNUSED
+}
+fn is_reading(x: BorrowFlag) -> bool {
+    x > UNUSED
 }
 
-impl<T: Component> ComponentArrayT<T> {
-    pub fn new() -> Self {
-        Self {
-            components: UnsafeCell::new(Vec::new()),
+struct ComponentArrayBorrowRef<'b> {
+    borrow: &'b Cell<BorrowFlag>,
+}
+
+impl<'b> ComponentArrayBorrowRef<'b> {
+    #[inline]
+    fn new(borrow: &'b Cell<BorrowFlag>) -> Option<ComponentArrayBorrowRef<'b>> {
+        let b = borrow.get().wrapping_add(1);
+        if !is_reading(b) {
+            None
+        } else {
+            borrow.set(b);
+            Some(ComponentArrayBorrowRef { borrow })
         }
     }
 }
 
-impl<T: Component> ComponentArray for ComponentArrayT<T> {
+impl Drop for ComponentArrayBorrowRef<'_> {
+    #[inline]
+    fn drop(&mut self) {
+        let borrow = self.borrow.get();
+        debug_assert!(is_reading(borrow));
+        self.borrow.set(borrow - 1);
+    }
+}
+
+impl Clone for ComponentArrayBorrowRef<'_> {
+    #[inline]
+    fn clone(&self) -> Self {
+        // Since this Ref exists, we know the borrow flag
+        // is a reading borrow.
+        let borrow = self.borrow.get();
+        debug_assert!(is_reading(borrow));
+        // Prevent the borrow counter from overflowing into
+        // a writing borrow.
+        assert!(borrow != isize::MAX);
+        self.borrow.set(borrow + 1);
+        ComponentArrayBorrowRef {
+            borrow: self.borrow,
+        }
+    }
+}
+
+struct ComponentArrayBorrowRefMut<'b> {
+    borrow: &'b Cell<BorrowFlag>,
+}
+
+impl Drop for ComponentArrayBorrowRefMut<'_> {
+    #[inline]
+    fn drop(&mut self) {
+        let borrow = self.borrow.get();
+        debug_assert!(is_writing(borrow));
+        self.borrow.set(borrow + 1);
+    }
+}
+
+impl<'b> ComponentArrayBorrowRefMut<'b> {
+    #[inline]
+    fn new(borrow: &'b Cell<BorrowFlag>) -> Option<ComponentArrayBorrowRefMut<'b>> {
+        match borrow.get() {
+            UNUSED => {
+                borrow.set(UNUSED - 1);
+                Some(ComponentArrayBorrowRefMut { borrow })
+            }
+            _ => None,
+        }
+    }
+
+    #[inline]
+    fn clone(&self) -> ComponentArrayBorrowRefMut<'b> {
+        let borrow = self.borrow.get();
+        debug_assert!(is_writing(borrow));
+        assert!(borrow != isize::MIN);
+        self.borrow.set(borrow - 1);
+        ComponentArrayBorrowRefMut {
+            borrow: self.borrow,
+        }
+    }
+}
+
+pub struct ComponentArrayRef<'b, T: Component + 'b> {
+    value: NonNull<Vec<Option<T>>>,
+    borrow: ComponentArrayBorrowRef<'b>,
+}
+
+impl<T: Component> Deref for ComponentArrayRef<'_, T> {
+    type Target = Vec<Option<T>>;
+
+    fn deref(&self) -> &Vec<Option<T>> {
+        unsafe { self.value.as_ref() }
+    }
+}
+
+pub struct ComponentArrayRefMut<'b, T: Component + 'b> {
+    value: NonNull<Vec<Option<T>>>,
+    borrow: ComponentArrayBorrowRefMut<'b>,
+    marker: PhantomData<&'b mut T>,
+}
+
+impl<'b, T: Component + 'b> ComponentArrayRefMut<'b, T> {
+    unsafe fn deref_mut_unsafe(&self) -> &mut Vec<Option<T>> {
+        unsafe { NonNull::new_unchecked(self.value.as_ptr()).as_mut() }
+    }
+}
+
+impl<T: Component> Deref for ComponentArrayRefMut<'_, T> {
+    type Target = Vec<Option<T>>;
+
+    fn deref(&self) -> &Vec<Option<T>> {
+        unsafe { self.value.as_ref() }
+    }
+}
+
+impl<T: Component> DerefMut for ComponentArrayRefMut<'_, T> {
+    fn deref_mut(&mut self) -> &mut Vec<Option<T>> {
+        unsafe { self.value.as_mut() }
+    }
+}
+
+pub struct ComponentArrayCell<T: Component> {
+    borrow: Cell<BorrowFlag>,
+    components: UnsafeCell<Vec<Option<T>>>,
+}
+
+impl<T: Component> ComponentArrayCell<T> {
+    pub fn new() -> Self {
+        Self {
+            borrow: Cell::new(UNUSED),
+            components: UnsafeCell::new(Vec::new()),
+        }
+    }
+
+    pub fn borrow(&self) -> ComponentArrayRef<'_, T> {
+        self.try_borrow().expect("already mutably borrowed")
+    }
+
+    pub fn borrow_mut(&self) -> ComponentArrayRefMut<'_, T> {
+        self.try_borrow_mut().expect("already borrowed")
+    }
+
+    pub fn try_borrow(&self) -> Option<ComponentArrayRef<'_, T>> {
+        match ComponentArrayBorrowRef::new(&self.borrow) {
+            Some(b) => {
+                let value = unsafe { NonNull::new_unchecked(self.components.get()) };
+                Some(ComponentArrayRef { value, borrow: b })
+            }
+            None => None,
+        }
+    }
+
+    pub fn try_borrow_mut(&self) -> Option<ComponentArrayRefMut<'_, T>> {
+        match ComponentArrayBorrowRefMut::new(&self.borrow) {
+            Some(b) => {
+                let value = unsafe { NonNull::new_unchecked(self.components.get()) };
+                Some(ComponentArrayRefMut {
+                    value,
+                    borrow: b,
+                    marker: PhantomData,
+                })
+            }
+            None => None,
+        }
+    }
+
+    pub fn get_mut(&mut self) -> &mut Vec<Option<T>> {
+        self.components.get_mut()
+    }
+}
+
+impl<T: Component> ComponentArray for ComponentArrayCell<T> {
     fn push_none(&mut self) {
         self.components.get_mut().push(None);
     }
@@ -87,7 +255,7 @@ impl World {
             self.component_arrays.get(&type_id).is_none(),
             "Already registered"
         );
-        let mut component_array = ComponentArrayT::<T>::new();
+        let mut component_array = ComponentArrayCell::<T>::new();
         for _ in 0..self.entities_count {
             component_array.push_none();
         }
@@ -97,28 +265,36 @@ impl World {
 
     pub fn add_component<T: Component>(&mut self, component: T, e: Entity) {
         unsafe {
-            self.get_component_array::<T>()
+            self.get_component_array_mut::<T>()
                 .expect("Component is not registered")
                 .components
-                .deref_mut()[e.to_num()] = Some(component).into();
+                .get_mut()[e.to_num()] = Some(component).into();
         }
     }
 
     pub fn remove_component<T: Component>(&mut self, component: T, e: Entity) {
         unsafe {
-            self.get_component_array::<T>()
+            self.get_component_array_mut::<T>()
                 .expect("Component is not registered")
                 .components
-                .deref_mut()[e.to_num()] = None.into();
+                .get_mut()[e.to_num()] = None.into();
         }
     }
 
-    pub fn get_component_array<T: Component>(&self) -> Option<&ComponentArrayT<T>> {
+    pub fn get_component_array<T: Component>(&self) -> Option<&ComponentArrayCell<T>> {
         let type_id = T::get_type_id();
         self.component_arrays
             .get(&type_id)?
             .as_any()
-            .downcast_ref::<ComponentArrayT<T>>()
+            .downcast_ref::<ComponentArrayCell<T>>()
+    }
+
+    pub fn get_component_array_mut<T: Component>(&mut self) -> Option<&mut ComponentArrayCell<T>> {
+        let type_id = T::get_type_id();
+        self.component_arrays
+            .get_mut(&type_id)?
+            .as_any_mut()
+            .downcast_mut::<ComponentArrayCell<T>>()
     }
 
     pub fn query<'w, T: Fetcherable>(&'w self) -> Query<'w, T> {
@@ -252,18 +428,17 @@ pub trait Fetcherable {
 impl<T: Component> Fetcherable for &T {
     type Item<'w> = &'w T;
     type ItemMut<'w> = &'w T;
-    type Fetch<'w> = &'w ComponentArrayT<T>;
+    type Fetch<'w> = ComponentArrayRef<'w, T>;
 
     fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w> {
-        world.get_component_array::<T>().unwrap()
+        world.get_component_array::<T>().unwrap().borrow()
     }
 
     fn fetch_entity<'f, 'w: 'f>(
         fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::Item<'f>> {
-        let comp_vec = unsafe { fetch.components.deref() };
-        match comp_vec.get(entity.to_num()) {
+        match fetch.get(entity.to_num()) {
             None => FetchResult::End,
             Some(comp) => match comp {
                 None => FetchResult::None,
@@ -276,8 +451,7 @@ impl<T: Component> Fetcherable for &T {
         fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::ItemMut<'f>> {
-        let comp_vec = unsafe { fetch.components.deref_mut() };
-        match comp_vec.get_mut(entity.to_num()) {
+        match fetch.get(entity.to_num()) {
             None => FetchResult::End,
             Some(comp) => match comp {
                 None => FetchResult::None,
@@ -290,18 +464,17 @@ impl<T: Component> Fetcherable for &T {
 impl<T: Component> Fetcherable for &mut T {
     type Item<'w> = &'w T;
     type ItemMut<'w> = &'w mut T;
-    type Fetch<'w> = &'w ComponentArrayT<T>;
+    type Fetch<'w> = ComponentArrayRefMut<'w, T>;
 
     fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w> {
-        world.get_component_array::<T>().unwrap()
+        world.get_component_array::<T>().unwrap().borrow_mut()
     }
 
     fn fetch_entity<'f, 'w: 'f>(
         fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::Item<'f>> {
-        let comp_vec = unsafe { fetch.components.deref() };
-        match comp_vec.get(entity.to_num()) {
+        match fetch.get(entity.to_num()) {
             None => FetchResult::End,
             Some(comp) => match comp {
                 None => FetchResult::None,
@@ -314,13 +487,14 @@ impl<T: Component> Fetcherable for &mut T {
         fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::ItemMut<'f>> {
-        let comp_vec = unsafe { fetch.components.deref_mut() };
-        match comp_vec.get_mut(entity.to_num()) {
-            None => FetchResult::End,
-            Some(comp) => match comp {
-                None => FetchResult::None,
-                Some(comp) => FetchResult::Some(comp),
-            },
+        unsafe {
+            match fetch.deref_mut_unsafe().get_mut(entity.to_num()) {
+                None => FetchResult::End,
+                Some(comp) => match comp {
+                    None => FetchResult::None,
+                    Some(comp) => FetchResult::Some(comp),
+                },
+            }
         }
     }
 }
