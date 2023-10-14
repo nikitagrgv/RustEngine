@@ -3,6 +3,7 @@ mod math;
 mod utils;
 
 use std::marker::PhantomData;
+use bevy::reflect::List;
 use crate::ecs::*;
 use crate::math::*;
 
@@ -91,15 +92,15 @@ fn main() {
     //
 
     let mut q = world.query::<(&Position, &Mass)>();
-    if let Some(cmps) = q.fetch_entity(e0)
+    if let FetchResult::Some(cmps) = q.fetch_entity(e0)
     {
         println!("FOUND FOR e0");
     }
-    if let Some(cmps) = q.fetch_entity(e1)
+    if let FetchResult::Some(cmps) = q.fetch_entity(e1)
     {
         println!("FOUND FOR e1");
     }
-    if let Some(cmps) = q.fetch_entity(e2)
+    if let FetchResult::Some(cmps) = q.fetch_entity(e2)
     {
         println!("FOUND FOR e2");
     }
@@ -107,15 +108,15 @@ fn main() {
     world.create_entity();
 
     let mut q = world.query::<(&Position, &Mass)>();
-    if let Some(cmps) = q.fetch_entity(e0)
+    if let FetchResult::Some(cmps) = q.fetch_entity(e0)
     {
         println!("FOUND FOR e0");
     }
-    if let Some(cmps) = q.fetch_entity(e1)
+    if let FetchResult::Some(cmps) = q.fetch_entity(e1)
     {
         println!("FOUND FOR e1");
     }
-    if let Some(cmps) = q.fetch_entity(e2)
+    if let FetchResult::Some(cmps) = q.fetch_entity(e2)
     {
         println!("FOUND FOR e2");
     }
@@ -137,6 +138,7 @@ fn main() {
     // }
     //
     // let mut s: Vec<i32> = Vec::<i32>::new();
+    // s.iter_mut()
     // s.push(123);
     // s.push(135);
     // s.push(616);
