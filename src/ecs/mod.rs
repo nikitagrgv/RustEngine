@@ -1,11 +1,8 @@
-use bevy::ecs::query::Has;
 use bevy::ptr::UnsafeCellDeref;
-use bevy::render::render_resource::encase::internal::{BufferMut, WriteInto, Writer};
 use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell, RefMut, UnsafeCell};
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut, Index};
 
 /// Entity is just id. You can assign components to Entity
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
@@ -126,31 +123,10 @@ impl World {
             .downcast_mut::<ComponentArrayT<T>>()
     }
 
-    pub fn query_mut<T: Fetcherable>(&mut self) -> Query<T> {
-        Query::<T>::new(self)
+    pub fn query<'w, T: Fetcherable>(&'w self) -> Query<'w, T> {
+        Query::<'w, T>::new(self)
     }
-
-    // pub fn iter2<T0: 'static, T1: 'static>(&self) -> ComponentIterator2<T0, T1> {
-    //     ComponentIterator2 {
-    //         cur_ent: Entity(0),
-    //         comp_arr_ref_0: self.get_component_array().unwrap(),
-    //         comp_arr_ref_1: self.get_component_array().unwrap(),
-    //     }
-    // }
-    // pub fn query<'a, T: ComponentsTuple>(&'a self) -> T::Query<'a> {
-    //     T::query(self)
-    // }
-    // pub fn query2<'a, T0: 'static, T1: 'static>(&'a self) -> Query2<'a, T0, T1> {
-    //     Query2 {
-    //         comp_arr_ref_0: self.get_component_array().unwrap(),
-    //         comp_arr_ref_1: self.get_component_array().unwrap(),
-    //     }
-    // }
 }
-
-// trait QuerySubject {}
-//
-// impl<T: Component> QuerySubject for T {}
 
 pub struct Query<'w, T: Fetcherable> {
     // world: &'w mut World,
@@ -163,7 +139,7 @@ impl<'w, T: Fetcherable> Query<'w, T> {
         Self { fetch }
     }
 
-    pub fn fetch_entity(&'w mut self, entity: Entity) -> Option<T::Item<'w>> {
+    pub fn fetch_entity<'q>(&'q mut self, entity: Entity) -> Option<T::Item<'q>> {
         T::fetch_entity(&mut self.fetch, entity)
     }
 }
@@ -173,7 +149,7 @@ pub trait Fetcherable {
     type Fetch<'w>;
 
     fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w>;
-    fn fetch_entity<'w>(fetch: &'w mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'w>>;
+    fn fetch_entity<'a, 'w: 'a>(fetch: &'a mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'a>>;
 }
 
 impl<T: Component> Fetcherable for &T {
@@ -184,7 +160,7 @@ impl<T: Component> Fetcherable for &T {
         world.get_component_array::<T>().unwrap()
     }
 
-    fn fetch_entity<'w>(fetch: &'w mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'w>> {
+    fn fetch_entity<'a, 'w: 'a>(fetch: &'a mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'a>> {
         // TODO# safe!!!!
         // Some(fetch.components.get(entity.to_num())?.deref())
         let cell = fetch.components.get(entity.to_num())?;
@@ -205,7 +181,7 @@ impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
         (T0::fetch_init(world), T1::fetch_init(world))
     }
 
-    fn fetch_entity<'w>(fetch: &'w mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'w>> {
+    fn fetch_entity<'a, 'w: 'a>(fetch: &'a mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'a>> {
         let item = match (
             T0::fetch_entity(&mut fetch.0, entity),
             T1::fetch_entity(&mut fetch.1, entity),
@@ -216,6 +192,12 @@ impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
         return item;
     }
 }
+
+
+
+
+
+
 
 // impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
 //     type Item<'w> = (T0::Item<'w>, T1::Item<'w>);

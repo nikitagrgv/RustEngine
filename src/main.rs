@@ -2,6 +2,7 @@ mod ecs;
 mod math;
 mod utils;
 
+use std::marker::PhantomData;
 use crate::ecs::*;
 use crate::math::*;
 
@@ -46,7 +47,23 @@ impl Velocity {
 //     fn fetch() -> Self::Item;
 // }
 
+
+
 fn main() {
+    // let mut num = 123i32;
+    // struct Spam<'w>{
+    //     m: &'w mut i32,
+    // }
+    // // not 'w: 'a !!!!!!
+    // fn ff<'w, 'a: 'w>(q: &'w mut Spam<'a>) {
+    //
+    // }
+    //
+    // let mut s = Spam{m: &mut num};
+    // ff(&mut s);
+    // ff(&mut s);
+
+
     let mut world = World::new();
     world.register_component::<Position>();
     world.register_component::<Mass>();
@@ -60,13 +77,51 @@ fn main() {
     world.add_component(Position::new(7.0, 8.0, 9.0), e1);
     world.add_component(Mass::new(10.0), e1);
 
-    let mut q = world.query_mut::<(&Position, &Mass)>();
-    if let Some(comps) = q.fetch_entity(e0) {
-        println!("{:#?}", comps);
-    }
-    if let Some(comps) = q.fetch_entity(e1) {
-        println!("{:#?}", comps);
+
+    // fn fff<'a, 'w: 'a>(q: &'a mut Query<'w, (&Position)>, e: Entity) {
+    //     q.fetch_entity(e);
+    // }
+    //
+    // let mut q = world.query::<(&Position)>();
+    // fff(&mut q, e0);
+    // fff(&mut q, e0);
+    //
+
+    fn fff<'a, 'w: 'a>(q: &'a mut Query<'w, (&Position, &Mass)>, e: Entity) {
+        q.fetch_entity(e);
     }
 
+    let mut q = world.query::<(&Position, &Mass)>();
+    fff(&mut q, e0);
 
+
+
+    fff(&mut q, e0);
+    q.fetch_entity(e0);
+    q.fetch_entity(e1);
+
+
+    // fff(&mut q, e0);
+    // fff(&mut q, e1);
+
+
+    //
+    // fn ttt<'w>(vec: &'w mut Vec<i32>) {
+    //     println!("{:#?}", vec);
+    // }
+    //
+    // let mut s: Vec<i32> = Vec::<i32>::new();
+    // s.push(123);
+    // s.push(135);
+    // s.push(616);
+    //
+    // ttt(&mut s);
+    // ttt(&mut s);
+    //
+    // if let Some(a) = s.as_mut_slice().get_mut(0) {
+    //     println!("{:#?}", a);
+    // }
+    // if let Some(a) = s.as_mut_slice().get_mut(1) {
+    //     println!("{:#?}", a);
+    // }
 }
