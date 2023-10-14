@@ -191,7 +191,7 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T> {
 pub struct QueryIterMut<'q, 'w: 'q, T: Fetcherable> {
     query: &'q Query<'w, T>,
     cur_entity: Entity,
-    marker: PhantomData<&'q mut Query<'w, T>>
+    marker: PhantomData<&'q mut Query<'w, T>>,
 }
 
 impl<'q, 'w: 'q, T: Fetcherable> QueryIterMut<'q, 'w, T> {
@@ -199,7 +199,7 @@ impl<'q, 'w: 'q, T: Fetcherable> QueryIterMut<'q, 'w, T> {
         Self {
             query,
             cur_entity: Entity::from_num(0),
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
 }
@@ -325,290 +325,72 @@ impl<T: Component> Fetcherable for &mut T {
     }
 }
 
-impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
-    type Item<'w> = (T0::Item<'w>, T1::Item<'w>);
-    type ItemMut<'w> = (T0::ItemMut<'w>, T1::ItemMut<'w>);
-    type Fetch<'w> = (T0::Fetch<'w>, T1::Fetch<'w>);
-
-    fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w> {
-        (T0::fetch_init(world), T1::fetch_init(world))
-    }
-
-    fn fetch_entity<'f, 'w: 'f>(
-        fetch: &'f Self::Fetch<'w>,
-        entity: Entity,
-    ) -> FetchResult<Self::Item<'f>> {
-        match (
-            T0::fetch_entity(&fetch.0, entity),
-            T1::fetch_entity(&fetch.1, entity),
-        ) {
-            (FetchResult::Some(t0), FetchResult::Some(t1)) => FetchResult::Some((t0, t1)),
-            (FetchResult::None, FetchResult::None) => FetchResult::None,
-            (_, _) => FetchResult::End,
-        }
-    }
-
-    fn fetch_entity_mut<'f, 'w: 'f>(
-        fetch: &'f Self::Fetch<'w>,
-        entity: Entity,
-    ) -> FetchResult<Self::ItemMut<'f>> {
-        match (
-            T0::fetch_entity_mut(&fetch.0, entity),
-            T1::fetch_entity_mut(&fetch.1, entity),
-        ) {
-            (FetchResult::Some(t0), FetchResult::Some(t1)) => FetchResult::Some((t0, t1)),
-            (FetchResult::None, FetchResult::None) => FetchResult::None,
-            (_, _) => FetchResult::End,
-        }
-    }
+macro_rules! impl_fetch_helper_1 {
+    ($a: tt) => {
+        FetchResult::None
+    };
 }
 
-// impl<T0: Fetcherable, T1: Fetcherable> Fetcherable for (T0, T1) {
-//     type Item<'w> = (T0::Item<'w>, T1::Item<'w>);
-//     type Fetch<'w> = (T0::Fetch<'w>, T1::Fetch<'w>);
-//
-//     fn fetch_init<'w>(world: &'w mut World) -> Self::Fetch<'w> {
-//         todo!()
-//     }
-//
-//     fn fetch_entity<'w>(fetch: &'w mut Self::Fetch<'w>, entity: Entity) -> Option<Self::Item<'w>> {
-//         todo!()
-//     }
-// }
+macro_rules! impl_fetch_helper_2 {
+    ($a: tt) => {
+        _
+    };
+}
 
-// pub trait ComponentsTuple {
-//     type RefsTuple<'a>;
-//     type Query<'a>;
-//     type ComponentArraysRefsTuple<'a>;
-//
-//     fn query<'a>(ecs: &'a Ecs) -> Self::Query<'a>;
-// }
-//
-// impl<T0: 'static, T1: 'static> ComponentsTuple for (T0, T1) {
-//     type RefsTuple<'a> = (&'a T0, &'a T1);
-//     type Query<'a> = Query<'a, Self::ComponentArraysRefsTuple<'a>>;
-//     type ComponentArraysRefsTuple<'a> = (
-//         Ref<'a, ComponentArrayT<T0>>,
-//         Ref<'a, ComponentArrayT<T1>>,
-//     );
-//
-//     fn query<'a>(ecs: &'a Ecs) -> Self::Query<'a> {
-//         Query2 {
-//             comp_arr_refs: (
-//                 ecs.get_component_array().unwrap(),
-//                 ecs.get_component_array().unwrap(),
-//             ),
-//         }
-//     }
-// }
-//
-// pub struct Query<'a, T: ComponentsTuple> {
-//     comp_arr_refs: T::ComponentArraysRefsTuple<'a>,
-// }
+macro_rules! impl_fetch {
+    ($($type_name: ident, $var_name: ident, $num: tt),*) => {
+        // impl<'a, $($type_name: 'static,)*> Fetch<'a> for ($($type_name, )*){
+        //     type Item = ($(&'a $type_name,)*);
+        // }
+        impl<$($type_name : Fetcherable, )*> Fetcherable for ($($type_name, )*) {
+            type Item<'w> = ($($type_name::Item<'w>, )*);
+            type ItemMut<'w> = ($($type_name::ItemMut<'w>, )*);
+            type Fetch<'w> = ($($type_name::Fetch<'w>, )*);
 
-// impl<'a, T: ComponentsTuple> Query<'a, T> {
-//     pub fn
-// }
+            fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w> {
+                ($($type_name::fetch_init(world), )*)
+            }
 
-// impl<'a, T0: 'static, T1: 'static> Query2<'a, T0, T1> {
-//     pub fn iter(&'a self) -> ComponentIterator2<'a, T0, T1> {
-//         ComponentIterator2 {
-//             query: self,
-//             cur_ent: Entity(0),
-//         }
-//     }
-// }
+            fn fetch_entity<'f, 'w: 'f>(
+                fetch: &'f Self::Fetch<'w>,
+                entity: Entity,
+            ) -> FetchResult<Self::Item<'f>> {
+                match (
+                    $($type_name::fetch_entity(&fetch.$num, entity), )*
+                ) {
+                    ($(FetchResult::Some($var_name),)*) => FetchResult::Some(($($var_name, )*)),
+                    ($(impl_fetch_helper_1!($var_name), )*) => FetchResult::None,
+                    ($(impl_fetch_helper_2!($var_name), )*) => FetchResult::End,
+                }
+            }
 
-// pub struct ComponentIterator2<'a, T0: 'static, T1: 'static> {
-//     query: &'a Query2<'a, T0, T1>,
-//     cur_ent: Entity,
-// }
-//
-// impl<'a, T0: 'a + 'static, T1: 'a + 'static> Iterator for ComponentIterator2<'a, T0, T1> {
-//     type Item = (Entity, &'a T0, &'a T1);
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         let query = self.query;
-//         debug_assert_eq!(
-//             query.comp_arr_ref_0.components.len(),
-//             query.comp_arr_ref_1.components.len()
-//         );
-//         let len = query.comp_arr_ref_1.components.len();
-//         loop {
-//             let cur_ent = self.cur_ent;
-//             let cur_ent_idx = self.cur_ent.0;
-//
-//             // End of the components
-//             if (cur_ent_idx >= len) {
-//                 break None;
-//             }
-//
-//             self.cur_ent.0 += 1;
-//
-//             // SAFETY: we was checked bounds already
-//             let c0 = unsafe { query.comp_arr_ref_0.components.get_unchecked(cur_ent_idx) };
-//             let c1 = unsafe { query.comp_arr_ref_1.components.get_unchecked(cur_ent_idx) };
-//
-//             match (c0, c1) {
-//                 (Some(c0), Some(c1)) => {
-//                     break Some((cur_ent, c0, c1));
-//                 }
-//                 _ => {}
-//             }
-//         }
-//     }
-// }
+            fn fetch_entity_mut<'f, 'w: 'f>(
+                fetch: &'f Self::Fetch<'w>,
+                entity: Entity,
+            ) -> FetchResult<Self::ItemMut<'f>> {
+                match (
+                    $($type_name::fetch_entity_mut(&fetch.$num, entity), )*
+                ) {
+                    ($(FetchResult::Some($var_name),)*) => FetchResult::Some(($($var_name, )*)),
+                    ($(impl_fetch_helper_1!($var_name), )*) => FetchResult::None,
+                    ($(impl_fetch_helper_2!($var_name), )*) => FetchResult::End,
+                }
+            }
+        }
+    };
+}
 
-//
-// pub struct ComponentFetch<'a, T: 'static> {
-//     component_array_ref: Ref<'a, ComponentArrayT<T>>,
-// }
-//
-// pub trait Query {
-//     type Item<'a>;
-//     type Fetch<'a>;
-//
-//     fn fetch<'w>(fetch: &'w mut Self::Fetch<'w>, e: Entity) -> Self::Item<'w>;
-// }
-//
-// pub trait Component: 'static {}
-//
-// impl<T: 'static> Component for T {}
-//
-// impl<T: Component> Query for T {
-//     type Item<'a> = &'a Option<T>;
-//     type Fetch<'a> = ComponentFetch<'a, T>;
-//
-//     fn fetch<'w>(fetch: &'w mut Self::Fetch<'w>, e: Entity) -> Self::Item<'w> {
-//         fetch.component_array_ref.components.get(e.0).unwrap()
-//     }
-// }
-//
-// pub struct ComponentIterator<'a, T: Component + Query> {
-//     fetch: T::Fetch<'a>,
-//     cur_ent: Entity,
-// }
-//
-// impl<'a, T: Component + Query> ComponentIterator<'a, T> {
-//     pub fn new(fetch: T::Fetch<'a>) -> Self {
-//         Self {
-//             fetch,
-//             cur_ent: Entity(0),
-//         }
-//     }
-// }
-//
-// impl<'a, T: Component + Query> Iterator for ComponentIterator<'a, T> {
-//     type Item = T::Item<'a>;
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         let cur_ent = self.cur_ent;
-//         self.cur_ent.0 += 1;
-//         let g = &self.fetch;
-//         g.
-//         todo!()
-//     }
-// }
+macro_rules! all_tuples {
+    ($m: ident) => {
+        $m!(T0, t0, 0);
+        $m!(T0, t0, 0, T1, t1, 1);
+        $m!(T0, t0, 0, T1, t1, 1, T2, t2, 2);
+        $m!(T0, t0, 0, T1, t1, 1, T2, t2, 2, T3, t3, 3);
+        $m!(T0, t0, 0, T1, t1, 1, T2, t2, 2, T3, t3, 3, T4, t4, 4);
+        $m!(T0, t0, 0, T1, t1, 1, T2, t2, 2, T3, t3, 3, T4, t4, 4, T5, t5, 5);
+        $m!(T0, t0, 0, T1, t1, 1, T2, t2, 2, T3, t3, 3, T4, t4, 4, T5, t5, 5, T6, t6, 6);
+        $m!(T0, t0, 0, T1, t1, 1, T2, t2, 2, T3, t3, 3, T4, t4, 4, T5, t5, 5, T6, t6, 6, T7, t7, 7);
+    };
+}
 
-// impl<'a, T: 'static> Query<'a, T> {
-//     pub fn new(component_array_ref: Ref<'a, ComponentArrayT<T>>) -> Self {
-//         Self {
-//             component_array_ref,
-//         }
-//     }
-//
-//     pub fn iterate(&'a self) -> ComponentIterator<'a, T> {
-//         ComponentIterator::new(self)
-//     }
-// }
-//
-// pub struct ComponentIterator<'a, T: 'a + 'static> {
-//     query: &'a Query<'a, T>,
-//     cur_entity: Entity,
-// }
-//
-// impl<'a, T: 'static> ComponentIterator<'a, T> {
-//     pub fn new(query: &'a Query<'a, T>) -> Self {
-//         Self {
-//             query,
-//             cur_entity: Entity(0),
-//         }
-//     }
-// }
-//
-// impl<'a, T: 'a + 'static> Iterator for ComponentIterator<'a, T> {
-//     type Item = (Entity, &'a T);
-//
-//     fn next(&mut self) -> Option<Self::Item> {
-//         let ca = &self.query.component_array_ref.components;
-//         loop {
-//             let cur_entity = self.cur_entity;
-//             self.cur_entity.0 += 1;
-//             let comp = ca.get(cur_entity.0);
-//             match comp {
-//                 None => {
-//                     break None;
-//                 }
-//                 Some(Some(comp)) => {
-//                     break Some((cur_entity, comp));
-//                 }
-//                 Some(None) => {}
-//             }
-//         }
-//     }
-// }
-
-// pub struct Fetch<'a, T: 'static>
-// {
-//     component_array: &'a ComponentArrayT<T>,
-// }
-//
-//
-// ($($name::Fetch<'w>,)*);
-
-// trait Fetch<'a> {
-//     type ComponentArrays;
-//     type Items;
-//
-//     fn init_fetch(ecs: &Ecs) -> Self::ComponentArrays;
-//     fn fetch(ca: &Self::ComponentArrays, e: Entity) -> &Option<Self::Items>;
-// }
-//
-// impl<'a, T: 'static> Fetch<'a> for (T, ) {
-//     type ComponentArrays = Ref<'a, ComponentArrayT<T>>;
-//     type Items = T;
-//
-//     fn init_fetch(ecs: &Ecs) -> Self::ComponentArrays {
-//         ecs.get_component_array::<T>().unwrap()
-//     }
-//
-//     fn fetch(ca: &Self::ComponentArrays, e: Entity) -> &Option<Self::Items> {
-//         &ca.components[e.0]
-//     }
-// }
-//
-// macro_rules! impl_fetch {
-//     ($($type_name: ident, $name: ident),*) => {
-//         impl<'a, $($type_name: 'static,)*> Fetch<'a> for ($($type_name, )*){
-//             type Item = ($(&'a $type_name,)*);
-//         }
-//     };
-// }
-//
-// // impl_fetch!(A0, a0, A1, a1);
-//
-// macro_rules! all_a {
-//     ($macro_name: ident) => {
-//         $macro_name!(A0, a0);
-//         $macro_name!(A0, a0, A1, a1);
-//         $macro_name!(A0, a0, A1, a1, A2, a2);
-//         $macro_name!(A0, a0, A1, a1, A2, a2, A3, a3);
-//         $macro_name!(A0, a0, A1, a1, A2, a2, A3, a3, A4, a4);
-//         $macro_name!(A0, a0, A1, a1, A2, a2, A3, a3, A4, a4, A5, a5);
-//         $macro_name!(A0, a0, A1, a1, A2, a2, A3, a3, A4, a4, A5, a5, A6, a6);
-//         $macro_name!(A0, a0, A1, a1, A2, a2, A3, a3, A4, a4, A5, a5, A6, a6, A7, a7);
-//         $macro_name!(A0, a0, A1, a1, A2, a2, A3, a3, A4, a4, A5, a5, A6, a6, A7, a7, A8, a8);
-//     };
-// }
-
-// all_a!(impl_fetch);
+all_tuples!(impl_fetch);
