@@ -1,4 +1,5 @@
 mod entity;
+mod component;
 
 use bevy::ptr::UnsafeCellDeref;
 use std::any::{Any, TypeId};
@@ -9,16 +10,8 @@ use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 
 use entity::*;
+use component::*;
 
-pub trait Component: 'static {
-    fn get_type_id() -> TypeId;
-}
-
-impl<T: 'static> Component for T {
-    fn get_type_id() -> TypeId {
-        TypeId::of::<T>()
-    }
-}
 
 trait ComponentArray {
     fn push_none(&mut self);
