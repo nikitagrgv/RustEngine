@@ -1,3 +1,5 @@
+mod entity;
+
 use bevy::ptr::UnsafeCellDeref;
 use std::any::{Any, TypeId};
 use std::cell::{Cell, Ref, RefCell, RefMut, UnsafeCell};
@@ -6,18 +8,7 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 
-/// Entity is just id. You can assign components to Entity
-#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
-pub struct Entity(usize);
-
-impl Entity {
-    fn from_num(num: usize) -> Self {
-        Self(num)
-    }
-    fn to_num(&self) -> usize {
-        self.0
-    }
-}
+use entity::*;
 
 pub trait Component: 'static {
     fn get_type_id() -> TypeId;
