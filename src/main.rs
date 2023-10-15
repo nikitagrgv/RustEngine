@@ -2,9 +2,6 @@ mod ecs;
 mod math;
 mod utils;
 
-use std::marker::PhantomData;
-use bevy::reflect::List;
-use bevy::utils::HashMap;
 use crate::ecs::*;
 use crate::math::*;
 
