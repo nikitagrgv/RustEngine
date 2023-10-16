@@ -1,6 +1,6 @@
 use crate::ecs::component::Component;
 use crate::ecs::entity::Entity;
-use crate::ecs::{ComponentArray, ComponentArrayCell, Fetcherable, Query};
+use crate::ecs::{CACell, ComponentArray, Fetcherable, Query};
 use std::any::TypeId;
 use std::collections::HashMap;
 
@@ -32,7 +32,7 @@ impl World {
             self.component_arrays.get(&type_id).is_none(),
             "Already registered"
         );
-        let mut component_array = ComponentArrayCell::<T>::new();
+        let mut component_array = CACell::<T>::new();
         for _ in 0..self.entities_count {
             component_array.push_none();
         }
@@ -40,38 +40,36 @@ impl World {
             .insert(type_id, Box::new(component_array));
     }
 
-    pub fn add_component<T: Component>(&mut self, component: T, e: Entity) {
+    pub fn set_component<T: Component>(&mut self, component: T, entity: Entity) {
         unsafe {
             self.get_component_array_mut::<T>()
                 .expect("Component is not registered")
-                .components
-                .get_mut()[e.to_num()] = Some(component).into();
+                .set_component(component, entity)
         }
     }
 
-    pub fn remove_component<T: Component>(&mut self, component: T, e: Entity) {
+    pub fn remove_component<T: Component>(&mut self, entity: Entity) {
         unsafe {
             self.get_component_array_mut::<T>()
                 .expect("Component is not registered")
-                .components
-                .get_mut()[e.to_num()] = None.into();
+                .remove_component(entity);
         }
     }
 
-    pub fn get_component_array<T: Component>(&self) -> Option<&ComponentArrayCell<T>> {
+    pub fn get_component_array<T: Component>(&self) -> Option<&CACell<T>> {
         let type_id = T::get_type_id();
         self.component_arrays
             .get(&type_id)?
             .as_any()
-            .downcast_ref::<ComponentArrayCell<T>>()
+            .downcast_ref::<CACell<T>>()
     }
 
-    pub fn get_component_array_mut<T: Component>(&mut self) -> Option<&mut ComponentArrayCell<T>> {
+    pub fn get_component_array_mut<T: Component>(&mut self) -> Option<&mut CACell<T>> {
         let type_id = T::get_type_id();
         self.component_arrays
             .get_mut(&type_id)?
             .as_any_mut()
-            .downcast_mut::<ComponentArrayCell<T>>()
+            .downcast_mut::<CACell<T>>()
     }
 
     pub fn query<'w, T: Fetcherable>(&'w self) -> Query<'w, T> {

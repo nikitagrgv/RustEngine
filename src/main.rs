@@ -71,14 +71,14 @@ fn main() {
     let e1 = world.create_entity();
     let e2 = world.create_entity();
 
-    world.add_component(Position::new(1.0, 2.0, 3.0), e0);
-    world.add_component(Mass::new(4.0), e0);
+    world.set_component(Position::new(1.0, 2.0, 3.0), e0);
+    world.set_component(Mass::new(4.0), e0);
 
-    world.add_component(Position::new(7.0, 8.0, 9.0), e1);
-    world.add_component(Mass::new(10.0), e1);
+    world.set_component(Position::new(7.0, 8.0, 9.0), e1);
+    world.set_component(Mass::new(10.0), e1);
 
     // world.add_component(Position::new(7.0, 8.0, 9.0), e2);
-    world.add_component(Mass::new(110.0), e2);
+    world.set_component(Mass::new(110.0), e2);
 
     // fn fff<'a, 'w: 'a>(q: &'a mut Query<'w, (&Position)>, e: Entity) {
     //     q.fetch_entity(e);
