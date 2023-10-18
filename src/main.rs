@@ -34,23 +34,46 @@ impl Velocity {
     }
 }
 
+// use bevy::prelude::{*};
+//
+// // fn greet_people(query: Query<&Name, With<Person>>) {
+// //     for name in &query {
+// //         println!("hello {}!", name.0);
+// //     }
+// // }
 
-use bevy::prelude::{*};
+fn init_example(state: &mut i32, commands: &mut Commands) {
+    println!("init {}", state);
+}
 
-// fn greet_people(query: Query<&Name, With<Person>>) {
-//     for name in &query {
-//         println!("hello {}!", name.0);
-//     }
-// }
+fn update_example(state: &mut i32, commands: &mut Commands) {
+    *state += 1;
+    if *state >= 150
+    {
+        println!("stop! {}", state);
+        commands.add(Command::Exit);
+    }
 
+    println!("update {}", state);
+}
 
+fn post_update_example(state: &mut i32, commands: &mut Commands) {
+    println!("post update {}", state);
+}
+
+fn shutdown_example(state: &mut i32, commands: &mut Commands) {
+    println!("shutdown {}", state);
+}
 
 fn main() {
-    // bevy::app::App::new().add_systems()
-
-
     let mut engine = Engine::new();
+
+    let mut logic = StateLogic::<i32>::new(123);
+    logic.add_function(init_example, LogicFuncType::Init);
+    logic.add_function(update_example, LogicFuncType::Update);
+    logic.add_function(post_update_example, LogicFuncType::PostUpdate);
+    logic.add_function(shutdown_example, LogicFuncType::Shutdown);
+    engine.add_logic(logic);
+
     engine.run();
-
-
 }
