@@ -28,7 +28,7 @@ pub enum LogicFuncType {
     PostUpdate,
     Render,
     Swap,
-    Shutdown
+    Shutdown,
 }
 
 enum LogicFuncVariant<T: StateObject> {
@@ -114,13 +114,11 @@ impl Engine {
         self.shutdown();
     }
 
-    fn init(&mut self)
-    {
+    fn init(&mut self) {
         self.run_logic_function(LogicFuncType::Init);
     }
 
-    fn shutdown(&mut self)
-    {
+    fn shutdown(&mut self) {
         self.run_logic_function(LogicFuncType::Shutdown);
     }
 
@@ -141,11 +139,14 @@ impl Engine {
     }
 
     fn run_logic_function(&mut self, func_type: LogicFuncType) {
-        for system in &mut self.systems {
+        // TODO: shit?
+        let mut systems = std::mem::take(&mut self.systems);
+        for system in &mut systems {
             let mut commands = Commands::new();
             system.run(func_type, &mut commands);
             self.execute_commands(commands);
         }
+        self.systems = systems;
     }
 
     fn execute_commands(&mut self, commands: Commands) {
