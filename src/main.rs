@@ -1,3 +1,5 @@
+extern crate sdl2;
+
 mod ecs;
 mod engine;
 mod math;
@@ -48,8 +50,7 @@ fn init_example(state: &mut i32, commands: &mut Commands) {
 
 fn update_example(state: &mut i32, commands: &mut Commands) {
     *state += 1;
-    if *state >= 150
-    {
+    if *state >= 444444444 {
         println!("stop! {}", state);
         commands.add(Command::Exit);
     }
@@ -76,4 +77,6 @@ fn main() {
     engine.add_logic(logic);
 
     engine.run();
+
+
 }

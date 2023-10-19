@@ -1,5 +1,7 @@
 use crate::ecs;
 use crate::ecs::World;
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 
 pub enum Command {
     Exit,
@@ -84,18 +86,49 @@ impl<T: StateObject> Logic for StateLogic<T> {
     }
 }
 
+pub struct Window {
+    sdl_context: sdl2::Sdl,
+    sdl_video: sdl2::VideoSubsystem,
+    sdl_canvas: sdl2::render::WindowCanvas,
+    sdl_event_pump: sdl2::EventPump,
+}
+
 pub struct Engine {
     world: World,
     exit_flag: bool,
     systems: Vec<Box<dyn Logic>>,
+    window: Window,
 }
 
 impl Engine {
     pub fn new() -> Self {
+        let window = {
+            let sdl_context = sdl2::init().unwrap();
+            let sdl_video = sdl_context.video().unwrap();
+            let sdl_window = sdl_video
+                .window("rust engine", 800, 600)
+                .position_centered()
+                .build()
+                .unwrap();
+            let mut sdl_canvas = sdl_window.into_canvas().build().unwrap();
+            sdl_canvas.set_draw_color(sdl2::pixels::Color::RGB(0, 255, 255));
+            sdl_canvas.clear();
+            sdl_canvas.present();
+            let mut sdl_event_pump = sdl_context.event_pump().unwrap();
+
+            Window {
+                sdl_context,
+                sdl_video,
+                sdl_canvas,
+                sdl_event_pump,
+            }
+        };
+
         Self {
             world: World::new(),
             exit_flag: false,
             systems: Vec::new(),
+            window,
         }
     }
 
@@ -106,6 +139,7 @@ impl Engine {
     pub fn run(&mut self) {
         self.init();
         while !self.exit_flag {
+            self.poll_events();
             self.update();
             self.post_update();
             self.render();
@@ -122,6 +156,19 @@ impl Engine {
         self.run_logic_function(LogicFuncType::Shutdown);
     }
 
+    fn poll_events(&mut self) {
+        for event in self.window.sdl_event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => self.exit_flag = true,
+                _ => {}
+            }
+        }
+    }
+
     fn update(&mut self) {
         self.run_logic_function(LogicFuncType::Update);
     }
@@ -131,11 +178,13 @@ impl Engine {
     }
 
     fn render(&mut self) {
+        self.window.sdl_canvas.clear();
         self.run_logic_function(LogicFuncType::Render);
     }
 
     fn swap(&mut self) {
         self.run_logic_function(LogicFuncType::Swap);
+        self.window.sdl_canvas.present();
     }
 
     fn run_logic_function(&mut self, func_type: LogicFuncType) {
