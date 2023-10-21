@@ -2,9 +2,9 @@ extern crate sdl2;
 
 mod ecs;
 mod engine;
+mod input;
 mod math;
 mod utils;
-mod input;
 
 use crate::ecs::*;
 use crate::engine::*;
@@ -45,11 +45,11 @@ impl Velocity {
 // //     }
 // // }
 
-fn init_example(state: &mut i32, commands: &mut Commands) {
+fn init_example(state: &mut i32, commands: &mut EngineInterface) {
     println!("init {}", state);
 }
 
-fn update_example(state: &mut i32, commands: &mut Commands) {
+fn update_example(state: &mut i32, commands: &mut EngineInterface) {
     *state += 1;
     if *state >= 444444444 {
         println!("stop! {}", state);
@@ -59,11 +59,11 @@ fn update_example(state: &mut i32, commands: &mut Commands) {
     // println!("update {}", state);
 }
 
-fn post_update_example(state: &mut i32, commands: &mut Commands) {
+fn post_update_example(state: &mut i32, commands: &mut EngineInterface) {
     // println!("post update {}", state);
 }
 
-fn shutdown_example(state: &mut i32, commands: &mut Commands) {
+fn shutdown_example(state: &mut i32, commands: &mut EngineInterface) {
     println!("shutdown {}", state);
 }
 
@@ -78,6 +78,4 @@ fn main() {
     engine.add_logic(logic);
 
     engine.run();
-
-
 }

@@ -11,14 +11,16 @@ pub enum Command {
     Exit,
 }
 
-pub struct Commands {
+pub struct EngineInterface<'a> {
     commands: Vec<Command>,
+    engine: &'a mut Engine,
 }
 
-impl Commands {
-    pub fn new() -> Self {
+impl<'a> EngineInterface<'a> {
+    pub fn new(engine: &'a mut Engine) -> Self {
         Self {
             commands: Vec::new(),
+            engine,
         }
     }
 
@@ -38,7 +40,7 @@ pub enum LogicFuncType {
 }
 
 enum LogicFuncVariant<T: StateObject> {
-    Default(fn(&mut T, &mut Commands)),
+    Default(fn(&mut T, &mut EngineInterface)),
 }
 
 struct LogicFunc<T: StateObject> {
@@ -51,7 +53,7 @@ pub trait StateObject: 'static {}
 impl<T: 'static> StateObject for T {}
 
 pub trait Logic {
-    fn run(&mut self, func_type: LogicFuncType, commands: &mut Commands);
+    fn run(&mut self, func_type: LogicFuncType, commands: &mut EngineInterface);
 }
 
 pub struct StateLogic<T: StateObject> {
@@ -67,7 +69,11 @@ impl<T: StateObject> StateLogic<T> {
         }
     }
 
-    pub fn add_function(&mut self, function: fn(&mut T, &mut Commands), func_type: LogicFuncType) {
+    pub fn add_function(
+        &mut self,
+        function: fn(&mut T, &mut EngineInterface),
+        func_type: LogicFuncType,
+    ) {
         let lf = LogicFunc {
             func_type,
             function: LogicFuncVariant::Default(function),
@@ -77,7 +83,7 @@ impl<T: StateObject> StateLogic<T> {
 }
 
 impl<T: StateObject> Logic for StateLogic<T> {
-    fn run(&mut self, func_type: LogicFuncType, commands: &mut Commands) {
+    fn run(&mut self, func_type: LogicFuncType, commands: &mut EngineInterface) {
         for function in &self.functions {
             if function.func_type == func_type {
                 match function.function {
@@ -220,15 +226,16 @@ impl Engine {
         // TODO: shit?
         let mut systems = std::mem::take(&mut self.systems);
         for system in &mut systems {
-            let mut commands = Commands::new();
-            system.run(func_type, &mut commands);
+            let mut engine_interface = EngineInterface::new(self);
+            system.run(func_type, &mut engine_interface);
+            let mut commands = engine_interface.commands;
             self.execute_commands(commands);
         }
         self.systems = systems;
     }
 
-    fn execute_commands(&mut self, commands: Commands) {
-        for command in commands.commands {
+    fn execute_commands(&mut self, commands: Vec<Command>) {
+        for command in commands {
             self.execute_command(command);
         }
     }
