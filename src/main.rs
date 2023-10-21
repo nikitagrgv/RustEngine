@@ -28,16 +28,13 @@ fn init_example(state: &mut i32, ei: &mut EngineInterface) {
 
 fn update_example(state: &mut i32, ei: &mut EngineInterface) {
     let input = ei.get_subsystem::<Input>();
-    if input.is_key_pressed(Scancode::W)
-    {
+    if input.is_key_pressed(Scancode::W) {
         println!("PRESSED!");
     }
-    if input.is_key_released(Scancode::W)
-    {
+    if input.is_key_released(Scancode::W) {
         println!("RELEASED!");
     }
-    if input.is_key_down(Scancode::A)
-    {
+    if input.is_key_down(Scancode::A) {
         println!("DOWN!");
     }
 }
