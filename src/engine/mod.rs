@@ -50,7 +50,7 @@ pub struct Window {
 pub struct Engine {
     world: World,
     exit_flag: bool,
-    systems: Vec<Box<dyn Logic>>,
+    logics: Vec<Box<dyn Logic>>,
     window: Window,
     input: Input,
 }
@@ -96,7 +96,7 @@ impl Engine {
         Self {
             world: World::new(),
             exit_flag: false,
-            systems: Vec::new(),
+            logics: Vec::new(),
             window,
             input,
         }
@@ -111,7 +111,7 @@ impl Engine {
     }
 
     pub fn add_logic<T: StateObject>(&mut self, logic: StateLogic<T>) {
-        self.systems.push(Box::new(logic));
+        self.logics.push(Box::new(logic));
     }
 
     pub fn run(&mut self) {
@@ -173,14 +173,14 @@ impl Engine {
 
     fn run_logic_function(&mut self, func_type: LogicFuncType) {
         // TODO: shit?
-        let mut systems = std::mem::take(&mut self.systems);
+        let mut systems = std::mem::take(&mut self.logics);
         for system in &mut systems {
             let mut engine_interface = EngineInterface::new(self);
             system.run(func_type, &mut engine_interface);
             let mut commands = engine_interface.commands;
             self.execute_commands(commands);
         }
-        self.systems = systems;
+        self.logics = systems;
     }
 
     fn execute_commands(&mut self, commands: Vec<Command>) {

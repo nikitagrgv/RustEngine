@@ -1,4 +1,5 @@
 use crate::engine::EngineInterface;
+use crate::ecs::*;
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub enum LogicFuncType {
