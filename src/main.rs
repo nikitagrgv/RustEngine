@@ -21,15 +21,18 @@ struct Mass(f32);
 struct Velocity(Vec3);
 
 fn init_example(state: &mut i32, engine_interface: &mut EngineInterface) {
+    println!("inited!");
 }
 
 fn update_example(state: &mut i32, engine_interface: &mut EngineInterface) {
+    
 }
 
 fn post_update_example(state: &mut i32, engine_interface: &mut EngineInterface) {
 }
 
 fn shutdown_example(state: &mut i32, engine_interface: &mut EngineInterface) {
+    println!("shutdown!");
 }
 
 fn main() {

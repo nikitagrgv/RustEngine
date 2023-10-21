@@ -9,9 +9,17 @@ impl Input {
         Self { sdl_event_pump }
     }
 
-    pub fn is_key_pressed(&self, scancode: Scancode) -> bool {
+    pub fn is_key_down(&self, scancode: Scancode) -> bool {
         let states = sdl2::keyboard::KeyboardState::new(&self.sdl_event_pump);
         states.is_scancode_pressed(scancode)
+    }
+
+    pub fn is_key_pressed(&self, scancode: Scancode) -> bool {
+        todo!()
+    }
+
+    pub fn is_key_released(&self, scancode: Scancode) -> bool {
+        todo!()
     }
 
     pub fn get_event_pump(&self) -> &sdl2::EventPump {
