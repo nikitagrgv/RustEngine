@@ -1,8 +1,12 @@
 mod engine_subsystem;
+mod logic;
+
+extern crate gl;
 
 use crate::ecs;
 use crate::ecs::World;
 use crate::engine::engine_subsystem::EngineSubsystem;
+use crate::engine::logic::{Logic, LogicFuncType, StateLogic, StateObject};
 use crate::input::*;
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Scancode};
@@ -37,77 +41,11 @@ impl<'a> EngineInterface<'a> {
     }
 }
 
-#[derive(Eq, PartialEq, Copy, Clone)]
-pub enum LogicFuncType {
-    Init,
-    Update,
-    PostUpdate,
-    Render,
-    Swap,
-    Shutdown,
-}
-
-enum LogicFuncVariant<T: StateObject> {
-    Default(fn(&mut T, &mut EngineInterface)),
-}
-
-struct LogicFunc<T: StateObject> {
-    func_type: LogicFuncType,
-    function: LogicFuncVariant<T>,
-}
-
-pub trait StateObject: 'static {}
-
-impl<T: 'static> StateObject for T {}
-
-pub trait Logic {
-    fn run(&mut self, func_type: LogicFuncType, commands: &mut EngineInterface);
-}
-
-pub struct StateLogic<T: StateObject> {
-    object: T,
-    functions: Vec<LogicFunc<T>>,
-}
-
-impl<T: StateObject> StateLogic<T> {
-    pub fn new(object: T) -> Self {
-        Self {
-            object,
-            functions: Vec::new(),
-        }
-    }
-
-    pub fn add_function(
-        &mut self,
-        function: fn(&mut T, &mut EngineInterface),
-        func_type: LogicFuncType,
-    ) {
-        let lf = LogicFunc {
-            func_type,
-            function: LogicFuncVariant::Default(function),
-        };
-        self.functions.push(lf);
-    }
-}
-
-impl<T: StateObject> Logic for StateLogic<T> {
-    fn run(&mut self, func_type: LogicFuncType, commands: &mut EngineInterface) {
-        for function in &self.functions {
-            if function.func_type == func_type {
-                match function.function {
-                    LogicFuncVariant::Default(f) => {
-                        f(&mut self.object, commands);
-                    }
-                }
-            }
-        }
-    }
-}
-
 pub struct Window {
     sdl_context: sdl2::Sdl,
     sdl_video: sdl2::VideoSubsystem,
-    sdl_canvas: sdl2::render::WindowCanvas,
+    sdl_window: sdl2::video::Window,
+    gl_context: sdl2::video::GLContext,
 }
 
 pub struct Engine {
@@ -135,18 +73,22 @@ impl Engine {
             let sdl_video = sdl_context.video().unwrap();
             let sdl_window = sdl_video
                 .window("rust engine", 800, 600)
+                .opengl()
+                .resizable()
                 .position_centered()
                 .build()
                 .unwrap();
-            let mut sdl_canvas = sdl_window.into_canvas().build().unwrap();
-            sdl_canvas.set_draw_color(sdl2::pixels::Color::RGB(0, 255, 255));
-            sdl_canvas.clear();
-            sdl_canvas.present();
+
+            let gl_context = sdl_window.gl_create_context().unwrap();
+            gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
+
+            unsafe { gl::ClearColor(0.3, 0.3, 0.5, 1.0) };
 
             Window {
                 sdl_context,
                 sdl_video,
-                sdl_canvas,
+                sdl_window,
+                gl_context,
             }
         };
 
@@ -207,10 +149,6 @@ impl Engine {
         }
 
         self.input.update();
-        // let keys_state = sdl2::keyboard::KeyboardState::new(&self.window.sdl_event_pump);
-        // if keys_state.is_scancode_pressed(Scancode::T) {
-        //     println!("T PRESSED!!!!!!!!!");
-        // }
     }
 
     fn update(&mut self) {
@@ -222,13 +160,16 @@ impl Engine {
     }
 
     fn render(&mut self) {
-        self.window.sdl_canvas.clear();
+        unsafe {
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+
         self.run_logic_function(LogicFuncType::Render);
     }
 
     fn swap(&mut self) {
         self.run_logic_function(LogicFuncType::Swap);
-        self.window.sdl_canvas.present();
+        self.window.sdl_window.gl_swap_window();
     }
 
     fn run_logic_function(&mut self, func_type: LogicFuncType) {
