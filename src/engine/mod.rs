@@ -24,7 +24,7 @@ impl<'a> EngineInterface<'a> {
         }
     }
 
-    pub fn add(&mut self, command: Command) {
+    pub fn queue_command(&mut self, command: Command) {
         self.commands.push(command);
     }
 
