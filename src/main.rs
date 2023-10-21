@@ -8,6 +8,7 @@ mod utils;
 
 use crate::ecs::*;
 use crate::engine::*;
+use crate::engine::logic::*;
 
 use crate::input::Input;
 use glm::Vec3;

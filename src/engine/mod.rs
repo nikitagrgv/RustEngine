@@ -1,15 +1,14 @@
 mod engine_subsystem;
-mod logic;
+pub mod logic;
 
 extern crate gl;
 
-use crate::ecs;
 use crate::ecs::World;
 use crate::engine::engine_subsystem::EngineSubsystem;
-use crate::engine::logic::{Logic, LogicFuncType, StateLogic, StateObject};
 use crate::input::*;
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Scancode};
+use crate::engine::logic::{Logic, LogicFuncType, StateLogic, StateObject};
 
 pub enum Command {
     Exit,
