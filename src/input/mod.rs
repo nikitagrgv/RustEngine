@@ -1,19 +1,19 @@
 use sdl2::keyboard::Scancode;
 
-const NUM_KEYS: usize = sdl2::keyboard::Scancode::Num as usize;
+const NUM_KEYS: usize = Scancode::Num as usize;
 
 pub struct Input {
     sdl_event_pump: sdl2::EventPump,
-    old_keys_states: Vec<bool>,
-    new_keys_states: Vec<bool>,
+    old_keys_states: [bool; NUM_KEYS],
+    new_keys_states: [bool; NUM_KEYS],
 }
 
 impl Input {
     pub fn new(sdl_event_pump: sdl2::EventPump) -> Self {
         Self {
             sdl_event_pump,
-            old_keys_states: vec![false; NUM_KEYS],
-            new_keys_states: vec![false; NUM_KEYS],
+            old_keys_states: [false; NUM_KEYS],
+            new_keys_states: [false; NUM_KEYS],
         }
     }
 
