@@ -1,70 +1,35 @@
+extern crate glm;
 extern crate sdl2;
 
 mod ecs;
 mod engine;
 mod input;
-mod math;
 mod utils;
 
 use crate::ecs::*;
 use crate::engine::*;
-use crate::math::*;
 
-#[derive(Clone, Copy, Default, Debug)]
-struct Position(Vec3f);
+use glm::Vec3;
 
-impl Position {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self(Vec3f::new(x, y, z))
-    }
-}
+#[derive(Clone, Copy, Debug)]
+struct Position(Vec3);
 
-#[derive(Clone, Copy, Default, Debug)]
+#[derive(Clone, Copy, Debug)]
 struct Mass(f32);
 
-impl Mass {
-    pub fn new(mass: f32) -> Self {
-        Self(mass)
-    }
+#[derive(Clone, Copy, Debug)]
+struct Velocity(Vec3);
+
+fn init_example(state: &mut i32, engine_interface: &mut EngineInterface) {
 }
 
-#[derive(Clone, Copy, Default, Debug)]
-struct Velocity(Vec3f);
-
-impl Velocity {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self(Vec3f::new(x, y, z))
-    }
+fn update_example(state: &mut i32, engine_interface: &mut EngineInterface) {
 }
 
-// use bevy::prelude::{*};
-//
-// // fn greet_people(query: Query<&Name, With<Person>>) {
-// //     for name in &query {
-// //         println!("hello {}!", name.0);
-// //     }
-// // }
-
-fn init_example(state: &mut i32, commands: &mut EngineInterface) {
-    println!("init {}", state);
+fn post_update_example(state: &mut i32, engine_interface: &mut EngineInterface) {
 }
 
-fn update_example(state: &mut i32, commands: &mut EngineInterface) {
-    *state += 1;
-    if *state >= 444444444 {
-        println!("stop! {}", state);
-        commands.add(Command::Exit);
-    }
-
-    // println!("update {}", state);
-}
-
-fn post_update_example(state: &mut i32, commands: &mut EngineInterface) {
-    // println!("post update {}", state);
-}
-
-fn shutdown_example(state: &mut i32, commands: &mut EngineInterface) {
-    println!("shutdown {}", state);
+fn shutdown_example(state: &mut i32, engine_interface: &mut EngineInterface) {
 }
 
 fn main() {
