@@ -27,6 +27,14 @@ impl<'a> EngineInterface<'a> {
     pub fn add(&mut self, command: Command) {
         self.commands.push(command);
     }
+
+    pub fn get_subsystem<T: EngineSubsystem>(&mut self) -> &T {
+        self.engine.get_subsystem()
+    }
+
+    pub fn get_subsystem_mut<T: EngineSubsystem>(&mut self) -> &mut T {
+        self.engine.get_subsystem_mut()
+    }
 }
 
 #[derive(Eq, PartialEq, Copy, Clone)]

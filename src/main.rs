@@ -9,7 +9,9 @@ mod utils;
 use crate::ecs::*;
 use crate::engine::*;
 
+use crate::input::Input;
 use glm::Vec3;
+use sdl2::keyboard::Scancode;
 
 #[derive(Clone, Copy, Debug)]
 struct Position(Vec3);
@@ -20,18 +22,29 @@ struct Mass(f32);
 #[derive(Clone, Copy, Debug)]
 struct Velocity(Vec3);
 
-fn init_example(state: &mut i32, engine_interface: &mut EngineInterface) {
+fn init_example(state: &mut i32, ei: &mut EngineInterface) {
     println!("inited!");
 }
 
-fn update_example(state: &mut i32, engine_interface: &mut EngineInterface) {
-    
+fn update_example(state: &mut i32, ei: &mut EngineInterface) {
+    let input = ei.get_subsystem::<Input>();
+    if input.is_key_pressed(Scancode::W)
+    {
+        println!("PRESSED!");
+    }
+    if input.is_key_released(Scancode::W)
+    {
+        println!("RELEASED!");
+    }
+    if input.is_key_down(Scancode::A)
+    {
+        println!("DOWN!");
+    }
 }
 
-fn post_update_example(state: &mut i32, engine_interface: &mut EngineInterface) {
-}
+fn post_update_example(state: &mut i32, ei: &mut EngineInterface) {}
 
-fn shutdown_example(state: &mut i32, engine_interface: &mut EngineInterface) {
+fn shutdown_example(state: &mut i32, ei: &mut EngineInterface) {
     println!("shutdown!");
 }
 
