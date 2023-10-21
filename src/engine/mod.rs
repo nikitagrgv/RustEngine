@@ -198,6 +198,7 @@ impl Engine {
             }
         }
 
+        self.input.update();
         // let keys_state = sdl2::keyboard::KeyboardState::new(&self.window.sdl_event_pump);
         // if keys_state.is_scancode_pressed(Scancode::T) {
         //     println!("T PRESSED!!!!!!!!!");
