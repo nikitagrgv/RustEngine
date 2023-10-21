@@ -1,7 +1,11 @@
+mod engine_subsystem;
+
 use crate::ecs;
 use crate::ecs::World;
+use crate::engine::engine_subsystem::EngineSubsystem;
+use crate::input::*;
 use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
+use sdl2::keyboard::{Keycode, Scancode};
 
 pub enum Command {
     Exit,
@@ -90,7 +94,6 @@ pub struct Window {
     sdl_context: sdl2::Sdl,
     sdl_video: sdl2::VideoSubsystem,
     sdl_canvas: sdl2::render::WindowCanvas,
-    sdl_event_pump: sdl2::EventPump,
 }
 
 pub struct Engine {
@@ -98,6 +101,17 @@ pub struct Engine {
     exit_flag: bool,
     systems: Vec<Box<dyn Logic>>,
     window: Window,
+    input: Input,
+}
+
+impl EngineSubsystem for Input {
+    fn get<'a>(engine: &'a Engine) -> &'a Self {
+        &engine.input
+    }
+
+    fn get_mut<'a>(engine: &'a mut Engine) -> &'a mut Self {
+        &mut engine.input
+    }
 }
 
 impl Engine {
@@ -114,22 +128,31 @@ impl Engine {
             sdl_canvas.set_draw_color(sdl2::pixels::Color::RGB(0, 255, 255));
             sdl_canvas.clear();
             sdl_canvas.present();
-            let mut sdl_event_pump = sdl_context.event_pump().unwrap();
 
             Window {
                 sdl_context,
                 sdl_video,
                 sdl_canvas,
-                sdl_event_pump,
             }
         };
+
+        let input = Input::new(window.sdl_context.event_pump().unwrap());
 
         Self {
             world: World::new(),
             exit_flag: false,
             systems: Vec::new(),
             window,
+            input,
         }
+    }
+
+    pub fn get_subsystem<T: EngineSubsystem>(&self) -> &T {
+        T::get(self)
+    }
+
+    pub fn get_subsystem_mut<T: EngineSubsystem>(&mut self) -> &mut T {
+        T::get_mut(self)
     }
 
     pub fn add_logic<T: StateObject>(&mut self, logic: StateLogic<T>) {
@@ -157,7 +180,8 @@ impl Engine {
     }
 
     fn poll_events(&mut self) {
-        for event in self.window.sdl_event_pump.poll_iter() {
+        // TODO: to input
+        for event in self.input.get_event_pump_mut().poll_iter() {
             match event {
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -167,6 +191,11 @@ impl Engine {
                 _ => {}
             }
         }
+
+        // let keys_state = sdl2::keyboard::KeyboardState::new(&self.window.sdl_event_pump);
+        // if keys_state.is_scancode_pressed(Scancode::T) {
+        //     println!("T PRESSED!!!!!!!!!");
+        // }
     }
 
     fn update(&mut self) {

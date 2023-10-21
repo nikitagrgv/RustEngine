@@ -4,6 +4,7 @@ mod ecs;
 mod engine;
 mod math;
 mod utils;
+mod input;
 
 use crate::ecs::*;
 use crate::engine::*;
@@ -55,11 +56,11 @@ fn update_example(state: &mut i32, commands: &mut Commands) {
         commands.add(Command::Exit);
     }
 
-    println!("update {}", state);
+    // println!("update {}", state);
 }
 
 fn post_update_example(state: &mut i32, commands: &mut Commands) {
-    println!("post update {}", state);
+    // println!("post update {}", state);
 }
 
 fn shutdown_example(state: &mut i32, commands: &mut Commands) {
