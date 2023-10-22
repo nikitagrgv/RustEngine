@@ -42,15 +42,23 @@ impl<'q, 'w: 'q, T: Fetcherable> QueryIter<'q, 'w, T> {
     }
 }
 
+pub struct QueryIterItem<'q, T: Fetcherable> {
+    pub ent: Entity,
+    pub comps: T::Item<'q>,
+}
+
 impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T> {
-    type Item = T::Item<'q>;
+    type Item = QueryIterItem<'q, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut cur_entity = self.cur_entity;
         let next = loop {
             match self.query.fetch_entity(cur_entity) {
                 FetchResult::Some(c) => {
-                    break Some(c);
+                    break Some(QueryIterItem {
+                        ent: cur_entity,
+                        comps: c,
+                    });
                 }
                 FetchResult::None => cur_entity.0 += 1,
                 FetchResult::End => {
@@ -80,15 +88,23 @@ impl<'q, 'w: 'q, T: Fetcherable> QueryIterMut<'q, 'w, T> {
     }
 }
 
+pub struct QueryIterMutItem<'q, T: Fetcherable> {
+    pub ent: Entity,
+    pub comps: T::ItemMut<'q>,
+}
+
 impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterMut<'q, 'w, T> {
-    type Item = T::ItemMut<'q>;
+    type Item = QueryIterMutItem<'q, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut cur_entity = self.cur_entity;
         let next = loop {
             match self.query.fetch_entity_mut(cur_entity) {
                 FetchResult::Some(c) => {
-                    break Some(c);
+                    break Some(QueryIterMutItem {
+                        ent: cur_entity,
+                        comps: c,
+                    });
                 }
                 FetchResult::None => cur_entity.0 += 1,
                 FetchResult::End => {

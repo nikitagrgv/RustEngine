@@ -5,7 +5,7 @@ impl Entity {
     pub(in crate::ecs) fn from_num(num: usize) -> Self {
         Self(num)
     }
-    pub(in crate::ecs) fn to_num(&self) -> usize {
+    pub fn to_num(&self) -> usize {
         self.0
     }
 }
