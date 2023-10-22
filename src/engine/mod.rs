@@ -33,7 +33,7 @@ impl<'a> EngineInterface<'a> {
         self.commands.push(command);
     }
 
-    pub fn get_subsystem<T: EngineSubsystem>(&mut self) -> &T {
+    pub fn get_subsystem<T: EngineSubsystem>(&self) -> &T {
         self.engine.get_subsystem()
     }
 
@@ -65,6 +65,16 @@ impl EngineSubsystem for Input {
 
     fn get_mut<'a>(engine: &'a mut Engine) -> &'a mut Self {
         &mut engine.input
+    }
+}
+
+impl EngineSubsystem for Time {
+    fn get<'a>(engine: &'a Engine) -> &'a Self {
+        &engine.time
+    }
+
+    fn get_mut<'a>(engine: &'a mut Engine) -> &'a mut Self {
+        &mut engine.time
     }
 }
 

@@ -10,9 +10,11 @@ use crate::ecs::*;
 use crate::engine::logic::*;
 use crate::engine::*;
 
+use crate::engine::time::Time;
 use crate::input::Input;
-use glm::Vec3;
+use glm::{clamp, Vec3};
 use sdl2::keyboard::Scancode;
+use sdl2::libc::stat;
 
 #[derive(Clone, Copy, Debug)]
 struct Position(Vec3);
@@ -24,7 +26,9 @@ struct Mass(f32);
 struct Velocity(Vec3);
 
 struct ExampleState {
-    var: f32,
+    red: f32,
+    green: f32,
+    last_time: f64,
 }
 
 fn init_example(state: &mut ExampleState, ei: &mut EngineInterface) {
@@ -33,30 +37,35 @@ fn init_example(state: &mut ExampleState, ei: &mut EngineInterface) {
 
 fn update_example(state: &mut ExampleState, ei: &mut EngineInterface) {
     let input = ei.get_subsystem::<Input>();
+    let time = ei.get_subsystem::<Time>();
 
     if input.is_key_down(Scancode::Left) {
-        state.var -= 0.01f32;
+        state.red -= 0.01f32;
     }
 
     if input.is_key_down(Scancode::Right) {
-        state.var += 0.01f32;
+        state.red += 0.01f32;
     }
 
-    if state.var > 1f32 || state.var < 0f32
-    {
-        state.var = 0f32;
+    state.red = clamp(state.red, 0f32, 1f32);
+
+    let cur_time = time.get_time();
+    println!("fps: {}", time.get_fps());
+    if cur_time - state.last_time > 1f64 {
+        state.last_time = cur_time;
+        if state.green > 0.5 {
+            state.green = 0f32;
+        } else {
+            state.green = 1f32;
+        }
     }
 
-    unsafe { gl::ClearColor(state.var, 0f32, 0f32, 1.0) };
+    unsafe { gl::ClearColor(state.red, state.green, 0f32, 1.0) };
 }
 
-fn post_update_example(state: &mut ExampleState, ei: &mut EngineInterface) {
+fn post_update_example(state: &mut ExampleState, ei: &mut EngineInterface) {}
 
-}
-
-fn render_example(state: &mut ExampleState, ei: &mut EngineInterface) {
-
-}
+fn render_example(state: &mut ExampleState, ei: &mut EngineInterface) {}
 
 fn shutdown_example(state: &mut ExampleState, ei: &mut EngineInterface) {
     println!("shutdown!");
@@ -65,7 +74,11 @@ fn shutdown_example(state: &mut ExampleState, ei: &mut EngineInterface) {
 fn main() {
     let mut engine = Engine::new();
 
-    let mut logic = StateLogic::new(ExampleState { var: 0f32 });
+    let mut logic = StateLogic::new(ExampleState {
+        red: 0f32,
+        green: 0f32,
+        last_time: 0f64,
+    });
     logic.add_function(init_example, LogicFuncType::Init);
     logic.add_function(update_example, LogicFuncType::Update);
     logic.add_function(post_update_example, LogicFuncType::PostUpdate);

@@ -3,6 +3,7 @@ pub struct Time {
     old_perf_counter: u64,
     perf_counter: u64,
     perf_freq: f64,
+    cur_time: f64,
     delta_ms: f64,
     delta_s: f64,
     fps: f64,
@@ -16,6 +17,7 @@ impl Time {
             old_perf_counter: 0,
             perf_counter: 0,
             perf_freq,
+            cur_time: 0f64,
             delta_ms: 0f64,
             delta_s: 0f64,
             fps: f64::INFINITY,
@@ -25,10 +27,15 @@ impl Time {
     pub(in crate::engine) fn update(&mut self) {
         self.old_perf_counter = self.perf_counter;
         self.perf_counter = self.sdl_timer.performance_counter();
+        self.cur_time = self.perf_counter as f64 / self.perf_freq;
         self.delta_ms =
             ((self.perf_counter - self.old_perf_counter) * 1000) as f64 / self.perf_freq;
         self.delta_s = self.delta_ms / 1000f64;
-        self.fps = 1f64 / self.delta_ms / 1000f64;
+        self.fps = 1f64 / self.delta_s;
+    }
+
+    pub fn get_time(&self) -> f64 {
+        self.cur_time
     }
 
     pub fn get_delta(&self) -> f64 {
@@ -39,7 +46,7 @@ impl Time {
         self.delta_ms
     }
 
-    pub fn get_delta_fps(&self) -> f64 {
+    pub fn get_fps(&self) -> f64 {
         self.fps
     }
 }
