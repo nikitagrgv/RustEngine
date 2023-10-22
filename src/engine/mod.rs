@@ -194,7 +194,7 @@ impl Engine {
         let mut systems = std::mem::take(&mut self.logics);
         for system in &mut systems {
             let mut engine_interface = EngineInterface::new(self);
-            system.run(func_type, &mut engine_interface);
+            system.run(&self.world, func_type, &mut engine_interface);
             let mut commands = engine_interface.commands;
             self.execute_commands(commands);
         }
