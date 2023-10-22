@@ -69,14 +69,14 @@ impl<T: StateObject> StateLogic<T> {
         self.functions.push(lf);
     }
 
-    pub fn add_ecs_function(
+    pub fn add_ecs_function<F: Fetcherable + 'static>(
         &mut self,
-        function: fn(&mut T, &mut EngineInterface),
+        function: fn(&mut T, query: Query<F>, &mut EngineInterface),
         func_type: LogicFuncType,
     ) {
         let lf = LogicFunc {
             func_type,
-            function: LogicFuncVariant::Default(function),
+            function: LogicFuncVariant::Ecs(Box::new(EcsFunctionT { func: function })),
         };
         self.functions.push(lf);
     }

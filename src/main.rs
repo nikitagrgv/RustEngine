@@ -62,16 +62,30 @@ fn update_example(state: &mut ExampleState, ei: &mut EngineInterface) {
     unsafe { gl::ClearColor(state.red, state.green, 0f32, 1.0) };
 }
 
-fn post_update_example(state: &mut ExampleState, ei: &mut EngineInterface) {}
+fn update_ecs_example(
+    state: &mut ExampleState,
+    mut query: Query<&mut Position>,
+    ei: &mut EngineInterface,
+) {
+    for c in query.iter_mut()
+    {
+        c.0.x += 1.0;
+    }
 
-fn render_example(state: &mut ExampleState, ei: &mut EngineInterface) {}
-
-fn shutdown_example(state: &mut ExampleState, ei: &mut EngineInterface) {
-    println!("shutdown!");
+    for c in query.iter()
+    {
+        println!("a: {}", c.0.x);
+    }
 }
 
 fn main() {
     let mut engine = Engine::new();
+    let mut world = engine.get_subsystem_mut::<World>();
+    world.register_component::<Position>();
+    for i in 0..10 {
+        let e = world.create_entity();
+        world.set_component(Position(Vec3::new(0f32, 0f32, 0f32)), e);
+    }
 
     let mut logic = StateLogic::new(ExampleState {
         red: 0f32,
@@ -80,9 +94,7 @@ fn main() {
     });
     logic.add_function(init_example, LogicFuncType::Init);
     logic.add_function(update_example, LogicFuncType::Update);
-    logic.add_function(post_update_example, LogicFuncType::PostUpdate);
-    logic.add_function(render_example, LogicFuncType::Render);
-    logic.add_function(shutdown_example, LogicFuncType::Shutdown);
+    logic.add_ecs_function(update_ecs_example, LogicFuncType::Update);
     engine.add_logic(logic);
 
     engine.run();

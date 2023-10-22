@@ -1,5 +1,5 @@
-use std::marker::PhantomData;
 use crate::ecs::{CARef, CARefMut, Component, Entity, World};
+use std::marker::PhantomData;
 
 pub struct Query<'w, T: Fetcherable> {
     pub fetch: T::Fetch<'w>,
@@ -171,7 +171,10 @@ impl<T: Component> Fetcherable for &mut T {
     type Fetch<'w> = CARefMut<'w, T>;
 
     fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w> {
-        world.get_component_array::<T>().unwrap().borrow_mut()
+        world
+            .get_component_array::<T>()
+            .expect("No such component")
+            .borrow_mut()
     }
 
     fn fetch_entity<'f, 'w: 'f>(

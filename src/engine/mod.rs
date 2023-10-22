@@ -74,6 +74,16 @@ impl EngineSubsystem for Time {
     }
 }
 
+impl EngineSubsystem for World {
+    fn get<'a>(engine: &'a Engine) -> &'a Self {
+        &engine.world
+    }
+
+    fn get_mut<'a>(engine: &'a mut Engine) -> &'a mut Self {
+        &mut engine.world
+    }
+}
+
 impl Engine {
     pub fn new() -> Self {
         let window = {
@@ -191,7 +201,7 @@ impl Engine {
         for system in &mut systems {
             let mut engine_interface = EngineInterface::new(self);
             system.run(&self.world, func_type, &mut engine_interface);
-            let mut commands = engine_interface.commands;
+            let commands = engine_interface.commands;
             self.execute_commands(commands);
         }
         self.logics = systems;
