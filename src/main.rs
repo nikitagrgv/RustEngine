@@ -12,6 +12,7 @@ use crate::engine::*;
 
 use crate::engine::time::Time;
 use crate::input::Input;
+use crate::utils::scoped_perf::ScopedPerf;
 use glm::{clamp, Vec3};
 use sdl2::keyboard::Scancode;
 
@@ -27,6 +28,7 @@ struct Velocity(Vec3);
 struct ExampleState {
     red: f32,
     green: f32,
+    blue: f32,
     last_time: f64,
     num: i32,
 }
@@ -61,60 +63,51 @@ fn update_example(state: &mut ExampleState, ei: &mut EngineInterface) {
     }
 
     state.num += 1;
-    if (state.num >= 60) {
+    if (state.num >= 10) {
         ei.queue_command(Command::Exit);
     }
 
-    unsafe { gl::ClearColor(state.red, state.green, 0f32, 1.0) };
+    unsafe { gl::ClearColor(state.red, state.green, state.blue, 1.0) };
 }
 
 fn update_ecs_example(
     state: &mut ExampleState,
-    mut query: Query<&mut Position>,
+    mut query: Query<&Position>,
     ei: &mut EngineInterface,
 ) {
-    for c in query.iter_mut() {
-        c.comp.0.x += 1.0;
+    for c in query.iter() {
+        let value = c.comp.0.x;
+        state.blue += glm::sin(c.comp.0.x);
+        state.blue *= glm::atan2(value, value * 3.0);
     }
 
-    // for c in query.iter() {
-    //     println!("e {}: {}", c.ent.to_num(), c.comp.0.x);
+    // for c in query.iter_mut() {
+    //     c.comp.0.y += state.blue;
     // }
 }
 
 extern crate pprof;
 
 fn main() {
-    {
-        let guard = pprof::ProfilerGuard::new(10000).unwrap();
-
-        let mut engine = Engine::new();
-        let mut world = engine.get_subsystem_mut::<World>();
-        world.register_component::<Position>();
-        for i in 0..1000000 {
-            let e = world.create_entity();
-            world.set_component(Position(Vec3::new(0f32, 0f32, 0f32)), e);
-        }
-
-        let mut logic = StateLogic::new(ExampleState {
-            red: 0f32,
-            green: 0f32,
-            last_time: 0f64,
-            num: 0,
-        });
-        logic.add_function(init_example, LogicFuncType::Init);
-        logic.add_function(update_example, LogicFuncType::Update);
-        logic.add_ecs_function(update_ecs_example, LogicFuncType::Update);
-        engine.add_logic(logic);
-
-        engine.run();
-
-        if let Ok(report) = guard.report().build() {
-            use std::io::Write;
-            let file = std::fs::File::create("/home/nikita/IdeaProjects/rustengine/data/flamegraph.svg").unwrap();
-            let mut options = pprof::flamegraph::Options::default();
-            options.image_width = Some(2500);
-            report.flamegraph_with_options(file, &mut options).unwrap();
-        };
+    let mut engine = Engine::new();
+    let mut world = engine.get_subsystem_mut::<World>();
+    world.register_component::<Position>();
+    for i in 0..10000000 {
+        let e = world.create_entity();
+        world.set_component(Position(Vec3::new(0f32, 0f32, 0f32)), e);
     }
+
+    let mut logic = StateLogic::new(ExampleState {
+        red: 0f32,
+        green: 0f32,
+        blue: 0f32,
+        last_time: 0f64,
+        num: 0,
+    });
+    logic.add_function(init_example, LogicFuncType::Init);
+    logic.add_function(update_example, LogicFuncType::Update);
+    logic.add_ecs_function(update_ecs_example, LogicFuncType::Update);
+    engine.add_logic(logic);
+
+    engine.run();
 }

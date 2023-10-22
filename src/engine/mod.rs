@@ -86,6 +86,9 @@ impl EngineSubsystem for World {
 
 impl Engine {
     pub fn new() -> Self {
+        #[cfg(feature = "profiler")]
+        let perf = crate::utils::scoped_perf::ScopedPerf::new();
+
         let window = {
             let sdl_context = sdl2::init().unwrap();
             let sdl_video = sdl_context.video().unwrap();
