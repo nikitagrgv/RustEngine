@@ -9,3 +9,8 @@ edition = "2021"
 gl = "*"
 glm = "*"
 sdl2 = "*"
+pprof = { version = "*", features = ["flamegraph"] }
+
+[profile.release]
+opt-level = 3
+debug = false

@@ -28,6 +28,7 @@ struct ExampleState {
     red: f32,
     green: f32,
     last_time: f64,
+    num: i32,
 }
 
 fn init_example(state: &mut ExampleState, ei: &mut EngineInterface) {
@@ -59,6 +60,11 @@ fn update_example(state: &mut ExampleState, ei: &mut EngineInterface) {
         }
     }
 
+    state.num += 1;
+    if (state.num >= 60) {
+        ei.queue_command(Command::Exit);
+    }
+
     unsafe { gl::ClearColor(state.red, state.green, 0f32, 1.0) };
 }
 
@@ -76,24 +82,39 @@ fn update_ecs_example(
     // }
 }
 
+extern crate pprof;
+
 fn main() {
-    let mut engine = Engine::new();
-    let mut world = engine.get_subsystem_mut::<World>();
-    world.register_component::<Position>();
-    for i in 0..10 {
-        let e = world.create_entity();
-        world.set_component(Position(Vec3::new(0f32, 0f32, 0f32)), e);
+    {
+        let guard = pprof::ProfilerGuard::new(10000).unwrap();
+
+        let mut engine = Engine::new();
+        let mut world = engine.get_subsystem_mut::<World>();
+        world.register_component::<Position>();
+        for i in 0..1000000 {
+            let e = world.create_entity();
+            world.set_component(Position(Vec3::new(0f32, 0f32, 0f32)), e);
+        }
+
+        let mut logic = StateLogic::new(ExampleState {
+            red: 0f32,
+            green: 0f32,
+            last_time: 0f64,
+            num: 0,
+        });
+        logic.add_function(init_example, LogicFuncType::Init);
+        logic.add_function(update_example, LogicFuncType::Update);
+        logic.add_ecs_function(update_ecs_example, LogicFuncType::Update);
+        engine.add_logic(logic);
+
+        engine.run();
+
+        if let Ok(report) = guard.report().build() {
+            use std::io::Write;
+            let file = std::fs::File::create("/home/nikita/IdeaProjects/rustengine/data/flamegraph.svg").unwrap();
+            let mut options = pprof::flamegraph::Options::default();
+            options.image_width = Some(2500);
+            report.flamegraph_with_options(file, &mut options).unwrap();
+        };
     }
-
-    let mut logic = StateLogic::new(ExampleState {
-        red: 0f32,
-        green: 0f32,
-        last_time: 0f64,
-    });
-    logic.add_function(init_example, LogicFuncType::Init);
-    logic.add_function(update_example, LogicFuncType::Update);
-    logic.add_ecs_function(update_ecs_example, LogicFuncType::Update);
-    engine.add_logic(logic);
-
-    engine.run();
 }
