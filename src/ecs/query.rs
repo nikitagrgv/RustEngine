@@ -44,7 +44,7 @@ impl<'q, 'w: 'q, T: Fetcherable> QueryIter<'q, 'w, T> {
 
 pub struct QueryIterItem<'q, T: Fetcherable> {
     pub ent: Entity,
-    pub comps: T::Item<'q>,
+    pub comp: T::Item<'q>,
 }
 
 impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T> {
@@ -57,7 +57,7 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T> {
                 FetchResult::Some(c) => {
                     break Some(QueryIterItem {
                         ent: cur_entity,
-                        comps: c,
+                        comp: c,
                     });
                 }
                 FetchResult::None => cur_entity.0 += 1,
@@ -90,7 +90,7 @@ impl<'q, 'w: 'q, T: Fetcherable> QueryIterMut<'q, 'w, T> {
 
 pub struct QueryIterMutItem<'q, T: Fetcherable> {
     pub ent: Entity,
-    pub comps: T::ItemMut<'q>,
+    pub comp: T::ItemMut<'q>,
 }
 
 impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterMut<'q, 'w, T> {
@@ -103,7 +103,7 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterMut<'q, 'w, T> {
                 FetchResult::Some(c) => {
                     break Some(QueryIterMutItem {
                         ent: cur_entity,
-                        comps: c,
+                        comp: c,
                     });
                 }
                 FetchResult::None => cur_entity.0 += 1,

@@ -68,12 +68,12 @@ fn update_ecs_example(
     ei: &mut EngineInterface,
 ) {
     for c in query.iter_mut() {
-        c.comps.0 += 1.0;
+        c.comp.0.x += 1.0;
     }
 
-    for c in query.iter() {
-        println!("e {}: {}", c.0.to_num(), c.1.0.x);
-    }
+    // for c in query.iter() {
+    //     println!("e {}: {}", c.ent.to_num(), c.comp.0.x);
+    // }
 }
 
 fn main() {
