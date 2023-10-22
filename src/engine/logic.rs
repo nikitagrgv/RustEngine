@@ -1,5 +1,5 @@
 use crate::ecs::*;
-use crate::engine::EngineInterface;
+use crate::engine::{Commands, EngineInterface};
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub enum LogicFuncType {
@@ -12,22 +12,22 @@ pub enum LogicFuncType {
 }
 
 trait EcsFunction<T: StateObject> {
-    fn call(&self, state: &mut T, world: &World, ei: &mut EngineInterface);
+    fn call(&self, state: &mut T, world: &World, ei: &EngineInterface, commands: &mut Commands);
 }
 
 struct EcsFunctionT<T: StateObject, F: Fetcherable> {
-    func: fn(&mut T, Query<'_, F>, &mut EngineInterface),
+    func: fn(&mut T, Query<'_, F>, &EngineInterface, &mut Commands),
 }
 
 impl<T: StateObject, F: Fetcherable> EcsFunction<T> for EcsFunctionT<T, F> {
-    fn call(&self, state: &mut T, world: &World, ei: &mut EngineInterface) {
+    fn call(&self, state: &mut T, world: &World, ei: &EngineInterface, commands: &mut Commands) {
         let q = world.query::<F>();
-        (self.func)(state, q, ei);
+        (self.func)(state, q, ei, commands);
     }
 }
 
 enum LogicFuncVariant<T: StateObject> {
-    Default(fn(&mut T, &mut EngineInterface)),
+    Default(fn(&mut T, &EngineInterface, &mut Commands)),
     Ecs(Box<dyn EcsFunction<T>>),
 }
 
@@ -41,7 +41,13 @@ pub trait StateObject: 'static {}
 impl<T: 'static> StateObject for T {}
 
 pub trait Logic {
-    fn run(&mut self, world: &World, func_type: LogicFuncType, commands: &mut EngineInterface);
+    fn run(
+        &mut self,
+        world: &World,
+        func_type: LogicFuncType,
+        ei: &EngineInterface,
+        commands: &mut Commands,
+    );
 }
 
 pub struct StateLogic<T: StateObject> {
@@ -59,7 +65,7 @@ impl<T: StateObject> StateLogic<T> {
 
     pub fn add_function(
         &mut self,
-        function: fn(&mut T, &mut EngineInterface),
+        function: fn(&mut T, &EngineInterface, &mut Commands),
         func_type: LogicFuncType,
     ) {
         let lf = LogicFunc {
@@ -71,7 +77,7 @@ impl<T: StateObject> StateLogic<T> {
 
     pub fn add_ecs_function<F: Fetcherable + 'static>(
         &mut self,
-        function: fn(&mut T, query: Query<F>, &mut EngineInterface),
+        function: fn(&mut T, query: Query<F>, &EngineInterface, &mut Commands),
         func_type: LogicFuncType,
     ) {
         let lf = LogicFunc {
@@ -83,14 +89,20 @@ impl<T: StateObject> StateLogic<T> {
 }
 
 impl<T: StateObject> Logic for StateLogic<T> {
-    fn run(&mut self, world: &World, func_type: LogicFuncType, ei: &mut EngineInterface) {
+    fn run(
+        &mut self,
+        world: &World,
+        func_type: LogicFuncType,
+        ei: &EngineInterface,
+        commands: &mut Commands,
+    ) {
         for function in &self.functions {
             if function.func_type == func_type {
                 match &function.function {
                     LogicFuncVariant::Default(f) => {
-                        f(&mut self.object, ei);
+                        f(&mut self.object, ei, commands);
                     }
-                    LogicFuncVariant::Ecs(f) => f.call(&mut self.object, &world, ei),
+                    LogicFuncVariant::Ecs(f) => f.call(&mut self.object, &world, ei, commands),
                 }
             }
         }

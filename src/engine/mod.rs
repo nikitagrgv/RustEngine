@@ -16,21 +16,29 @@ pub enum Command {
     Exit,
 }
 
-pub struct EngineInterface<'a> {
+pub struct Commands {
     commands: Vec<Command>,
-    engine: &'a Engine,
 }
 
-impl<'a> EngineInterface<'a> {
-    pub fn new(engine: &'a Engine) -> Self {
+impl Commands {
+    fn new() -> Self {
         Self {
             commands: Vec::new(),
-            engine,
         }
     }
 
     pub fn queue_command(&mut self, command: Command) {
         self.commands.push(command);
+    }
+}
+
+pub struct EngineInterface<'a> {
+    engine: &'a Engine,
+}
+
+impl<'a> EngineInterface<'a> {
+    pub fn new(engine: &'a Engine) -> Self {
+        Self { engine }
     }
 
     pub fn get_subsystem<T: EngineSubsystem>(&self) -> &T {
@@ -203,9 +211,9 @@ impl Engine {
         let mut systems = std::mem::take(&mut self.logics);
         for system in &mut systems {
             let mut engine_interface = EngineInterface::new(self);
-            system.run(&self.world, func_type, &mut engine_interface);
-            let commands = engine_interface.commands;
-            self.execute_commands(commands);
+            let mut commands = Commands::new();
+            system.run(&self.world, func_type, &engine_interface, &mut commands);
+            self.execute_commands(commands.commands);
         }
         self.logics = systems;
     }
