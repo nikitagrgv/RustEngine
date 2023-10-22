@@ -51,7 +51,7 @@ fn update_example(state: &mut ExampleState, ei: &mut EngineInterface) {
 
     let cur_time = time.get_time();
     println!("fps: {}", time.get_fps());
-    if cur_time - state.last_time > 1f64 {
+    if cur_time - state.last_time > 0.1f64 {
         state.last_time = cur_time;
         if state.green > 0.5 {
             state.green = 0f32;

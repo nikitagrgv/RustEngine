@@ -90,8 +90,8 @@ impl Engine {
                 .position_centered()
                 .build()
                 .unwrap();
-
             let gl_context = sdl_window.gl_create_context().unwrap();
+            sdl_video.gl_set_swap_interval(1).unwrap(); // vsync on
             gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
 
             unsafe { gl::ClearColor(0.3, 0.3, 0.5, 1.0) };
