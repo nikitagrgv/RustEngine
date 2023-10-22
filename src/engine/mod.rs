@@ -1,14 +1,16 @@
 mod engine_subsystem;
 pub mod logic;
+pub mod time;
 
 extern crate gl;
 
 use crate::ecs::World;
 use crate::engine::engine_subsystem::EngineSubsystem;
+use crate::engine::logic::{Logic, LogicFuncType, StateLogic, StateObject};
+use crate::engine::time::Time;
 use crate::input::*;
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Scancode};
-use crate::engine::logic::{Logic, LogicFuncType, StateLogic, StateObject};
 
 pub enum Command {
     Exit,
@@ -53,6 +55,7 @@ pub struct Engine {
     logics: Vec<Box<dyn Logic>>,
     window: Window,
     input: Input,
+    time: Time,
 }
 
 impl EngineSubsystem for Input {
@@ -93,12 +96,15 @@ impl Engine {
 
         let input = Input::new(window.sdl_context.event_pump().unwrap());
 
+        let time = Time::new(window.sdl_context.timer().unwrap());
+
         Self {
             world: World::new(),
             exit_flag: false,
             logics: Vec::new(),
             window,
             input,
+            time,
         }
     }
 
@@ -117,6 +123,8 @@ impl Engine {
     pub fn run(&mut self) {
         self.init();
         while !self.exit_flag {
+            self.time.update();
+
             self.poll_events();
             self.update();
             self.post_update();
