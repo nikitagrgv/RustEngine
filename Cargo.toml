@@ -11,6 +11,7 @@ profiler = []
 gl = "*"
 glm = "*"
 sdl2 = "*"
+num = "*"
 pprof = { version = "*", features = ["flamegraph"] }
 
 [profile.release]

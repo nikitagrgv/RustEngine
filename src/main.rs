@@ -1,21 +1,22 @@
 extern crate glm;
+extern crate num;
 extern crate sdl2;
 
 mod ecs;
 mod engine;
 mod input;
+mod math;
 mod utils;
 
 use crate::ecs::*;
 use crate::engine::logic::*;
-use crate::engine::*;
-
 use crate::engine::time::Time;
+use crate::engine::*;
 use crate::input::Input;
-use crate::utils::scoped_perf::ScopedPerf;
-use glm::{clamp, DVec3, Vec3};
+use crate::math::*;
+use crate::num::*;
+use glm::{clamp, DVec3, GenNum, Vec3};
 use sdl2::keyboard::Scancode;
-use sdl2::keyboard::Scancode::Escape;
 
 #[derive(Clone, Copy, Debug)]
 struct Position(DVec3);
@@ -39,36 +40,6 @@ fn update_gravity_sys(
     ei: &EngineInterface,
     commands: &mut Commands,
 ) {
-    // let input = ei.get_subsystem::<Input>();
-    // let time = ei.get_subsystem::<Time>();
-    //
-    // if input.is_key_down(Scancode::Left) {
-    //     state.red -= 0.01f32;
-    // }
-    //
-    // if input.is_key_down(Scancode::Right) {
-    //     state.red += 0.01f32;
-    // }
-    //
-    // state.red = clamp(state.red, 0f32, 1f32);
-    //
-    // let cur_time = time.get_time();
-    // println!("fps: {}", time.get_fps());
-    // if cur_time - state.last_time > 1f64 {
-    //     state.last_time = cur_time;
-    //     if state.green > 0.5 {
-    //         state.green = 0f32;
-    //     } else {
-    //         state.green = 1f32;
-    //     }
-    // }
-    //
-    // state.num += 1;
-    // if (state.num >= 10) {
-    //     ei.queue_command(Command::Exit);
-    // }
-    //
-    // unsafe { gl::ClearColor(state.red, state.green, state.blue, 1.0) };
 }
 
 fn update_ecs_gravity_sys(
@@ -77,6 +48,23 @@ fn update_ecs_gravity_sys(
     ei: &EngineInterface,
     commands: &mut Commands,
 ) {
+    for attractable in query.iter() {
+        let mut sum_force = DVec3::zero();
+        for attractor in query.iter() {
+            if attractor.ent == attractable.ent {
+                continue;
+            }
+
+            let to_attractor = attractor.comp.0 .0 - attractable.comp.0 .0;
+            let distance = to_attractor.length();
+            // TODO: shit! glm huita!
+            let tmp = state.gravity_constant * attractor.comp.2 .0 * attractable.comp.2 .0
+                / (distance * distance * distance);
+            let force = to_attractor.map(|v| v * tmp);
+            // TODO: glm is shit!
+            sum_force = sum_force.zip(force, |v1, v2| v1 + v2);
+        }
+    }
 }
 
 fn main() {
@@ -121,7 +109,7 @@ fn main() {
             let time = ei.get_subsystem::<Time>();
             let input = ei.get_subsystem::<Input>();
 
-            if input.is_key_pressed(Escape) {
+            if input.is_key_pressed(Scancode::Escape) {
                 commands.queue_command(Command::Exit);
             }
             if time.get_time() - *last_fps_print_time > 1.0 {
