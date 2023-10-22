@@ -18,11 +18,11 @@ pub enum Command {
 
 pub struct EngineInterface<'a> {
     commands: Vec<Command>,
-    engine: &'a mut Engine,
+    engine: &'a Engine,
 }
 
 impl<'a> EngineInterface<'a> {
-    pub fn new(engine: &'a mut Engine) -> Self {
+    pub fn new(engine: &'a Engine) -> Self {
         Self {
             commands: Vec::new(),
             engine,
@@ -35,10 +35,6 @@ impl<'a> EngineInterface<'a> {
 
     pub fn get_subsystem<T: EngineSubsystem>(&self) -> &T {
         self.engine.get_subsystem()
-    }
-
-    pub fn get_subsystem_mut<T: EngineSubsystem>(&mut self) -> &mut T {
-        self.engine.get_subsystem_mut()
     }
 }
 
