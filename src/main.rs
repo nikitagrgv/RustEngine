@@ -67,13 +67,11 @@ fn update_ecs_example(
     mut query: Query<&mut Position>,
     ei: &mut EngineInterface,
 ) {
-    for c in query.iter_mut()
-    {
+    for c in query.iter_mut() {
         c.0.x += 1.0;
     }
 
-    for c in query.iter()
-    {
+    for c in query.iter() {
         println!("a: {}", c.0.x);
     }
 }
