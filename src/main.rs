@@ -8,7 +8,8 @@ mod input;
 mod math;
 mod utils;
 
-use gl::types::GLfloat;
+use gl::SCISSOR_TEST;
+use gl::types::{GLfloat, GLint, GLuint};
 use crate::ecs::*;
 use crate::engine::logic::*;
 use crate::engine::time::Time;
@@ -16,7 +17,7 @@ use crate::engine::*;
 use crate::input::Input;
 use crate::math::*;
 use crate::num::*;
-use glm::{clamp, DVec3, GenNum, sin, Vec3};
+use glm::{clamp, cos, DVec3, GenNum, sin, Vec3};
 use sdl2::keyboard::Scancode;
 
 #[derive(Clone, Copy, Debug)]
@@ -123,7 +124,28 @@ fn main() {
         }
         fn render(last_fps_print_time: &mut f64, ei: &EngineInterface, commands: &mut Commands) {
             unsafe {
-                gl::ClearColor(sin(*last_fps_print_time as GLfloat * 10000.0) / 2.0 + 0.5, 0.2, 0.5, 1.0);
+                let f1 = sin(*last_fps_print_time as GLfloat * 352.0) / 2.0 + 0.5;
+                let f2 = sin(*last_fps_print_time as GLfloat * 352.0) / 2.0 + 0.5;
+                let f3 = sin(*last_fps_print_time as GLfloat * 123.0) / 2.0 + 0.5;
+                let f4 = sin(*last_fps_print_time as GLfloat * 515.0) / 2.0 + 0.5;
+                let f5 = sin(*last_fps_print_time as GLfloat * 612.0) / 2.0 + 0.5;
+                let f6 = sin(*last_fps_print_time as GLfloat * 122.0) / 2.0 + 0.5;
+                let f7 = sin(*last_fps_print_time as GLfloat * 612.0) / 2.0 + 0.5;
+                let f8 = sin(*last_fps_print_time as GLfloat * 125.0) / 2.0 + 0.5;
+                let i1 = (f1 * 120.0 + f2) as GLint;
+                let i2 = (f2 * 200.0 + f1) as GLint;
+                let i3 = (f3 * 225.0 + f3) as GLint;
+                let i4 = (f4 * 155.0 + f4) as GLint;
+                let i5 = (f5 * 112.0 + f6) as GLint;
+                let i6 = (f6 * 225.0 + f5) as GLint;
+                let i7 = (f7 * 61.0 + f7) as GLint;
+                let i8 = (f8 * 51.0 + f1) as GLint;
+                gl::Enablei(SCISSOR_TEST, 0);
+                gl::Scissor(200+i1, 200+i2, i3, i4);
+                gl::Viewport(200+i2, 200+i3, i4, i1);
+                gl::ClearColor(sin(*last_fps_print_time as GLfloat * 15000.0) / 2.0 + 0.5,
+                               sin(*last_fps_print_time as GLfloat * 15001.0) / 2.0 + 0.5,
+                               sin(*last_fps_print_time as GLfloat * 15002.0) / 2.0 + 0.5, 1.0);
             }
         }
         basic_logic.add_function(update, LogicFuncType::Update);
