@@ -9,6 +9,7 @@ use crate::engine::engine_subsystem::EngineSubsystem;
 use crate::engine::logic::{Logic, LogicFuncType, StateLogic, StateObject};
 use crate::engine::time::Time;
 use crate::input::*;
+use crate::utils;
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Scancode};
 
@@ -107,11 +108,19 @@ impl Engine {
                 .position_centered()
                 .build()
                 .unwrap();
+            sdl_video.gl_attr().set_context_flags().debug().set(); // for debug with RenderDoc
             let gl_context = sdl_window.gl_create_context().unwrap();
             sdl_video.gl_set_swap_interval(1).unwrap(); // vsync on
             gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
 
             unsafe { gl::ClearColor(0.3, 0.3, 0.5, 1.0) };
+
+            unsafe {
+                println!(
+                    "VERSION: {}",
+                    utils::c_string_to_str(gl::GetString(gl::VERSION))
+                );
+            }
 
             Window {
                 sdl_context,

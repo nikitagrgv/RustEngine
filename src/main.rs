@@ -8,6 +8,7 @@ mod input;
 mod math;
 mod utils;
 
+use gl::types::GLfloat;
 use crate::ecs::*;
 use crate::engine::logic::*;
 use crate::engine::time::Time;
@@ -15,7 +16,7 @@ use crate::engine::*;
 use crate::input::Input;
 use crate::math::*;
 use crate::num::*;
-use glm::{clamp, DVec3, GenNum, Vec3};
+use glm::{clamp, DVec3, GenNum, sin, Vec3};
 use sdl2::keyboard::Scancode;
 
 #[derive(Clone, Copy, Debug)]
@@ -116,8 +117,17 @@ fn main() {
                 *last_fps_print_time = time.get_time();
                 println!("FPS: {}", time.get_fps());
             }
+            else {
+                *last_fps_print_time -= 0.001;
+            }
+        }
+        fn render(last_fps_print_time: &mut f64, ei: &EngineInterface, commands: &mut Commands) {
+            unsafe {
+                gl::ClearColor(sin(*last_fps_print_time as GLfloat * 100.0) / 2.0 + 0.5, 0.2, 0.5, 1.0);
+            }
         }
         basic_logic.add_function(update, LogicFuncType::Update);
+        basic_logic.add_function(render, LogicFuncType::Render);
         engine.add_logic(basic_logic);
     }
 
