@@ -123,7 +123,7 @@ fn main() {
         }
         fn render(last_fps_print_time: &mut f64, ei: &EngineInterface, commands: &mut Commands) {
             unsafe {
-                gl::ClearColor(sin(*last_fps_print_time as GLfloat * 100.0) / 2.0 + 0.5, 0.2, 0.5, 1.0);
+                gl::ClearColor(sin(*last_fps_print_time as GLfloat * 10000.0) / 2.0 + 0.5, 0.2, 0.5, 1.0);
             }
         }
         basic_logic.add_function(update, LogicFuncType::Update);
