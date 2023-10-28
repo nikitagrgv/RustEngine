@@ -66,6 +66,7 @@ fn update_ecs_gravity_sys(
             // TODO: glm is shit!
             sum_force = sum_force.zip(force, |v1, v2| v1 + v2);
         }
+        // TODO!
     }
 }
 
