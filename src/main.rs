@@ -124,23 +124,33 @@ fn update_gravity_sys(
         .camera_transform
         .prepend_translation(&(dir.xyz() * dt * multiplier));
 
-    let mut pitch = 0.0;
-    if input.is_key_down(Scancode::Left) {
-        pitch -= 1.0;
-    }
-    if input.is_key_down(Scancode::Right) {
-        pitch += 1.0;
-    }
-    state.camera_transform = glm::rotate_y(&state.camera_transform, pitch * dt * 15.0.to_radians());
+    {
+        let mut delta_pitch = 0.0;
+        if input.is_key_down(Scancode::Left) {
+            delta_pitch += 1.0;
+        }
+        if input.is_key_down(Scancode::Right) {
+            delta_pitch -= 1.0;
+        }
 
-    let mut yaw = 0.0;
-    if input.is_key_down(Scancode::Up) {
-        yaw -= 1.0;
+        let mut delta_yaw = 0.0;
+        if input.is_key_down(Scancode::Up) {
+            delta_yaw -= 1.0;
+        }
+        if input.is_key_down(Scancode::Down) {
+            delta_yaw += 1.0;
+        }
+        let multiplier = 15.0.to_radians();
+
+        let pos = state.camera_transform.column(3);
+        let pitch_rot = glm::rotation(delta_pitch * dt * multiplier, &DVec3::y_axis());
+        let yaw_rot = glm::rotation(delta_yaw * dt * multiplier, &DVec3::x_axis());
+        let mut new_transform = pitch_rot * state.camera_transform * yaw_rot;
+        new_transform.set_column(3, &pos);
+        state.camera_transform = new_transform;
+
+        println!("pos: {}", state.camera_transform.column(3));
     }
-    if input.is_key_down(Scancode::Down) {
-        yaw += 1.0;
-    }
-    state.camera_transform = glm::rotate_x(&state.camera_transform, yaw * dt * 15.0.to_radians());
 }
 
 fn update_ecs_gravity_sys(

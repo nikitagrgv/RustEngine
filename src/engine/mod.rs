@@ -129,7 +129,7 @@ impl Engine {
             let sdl_context = sdl2::init().unwrap();
             let sdl_video = sdl_context.video().unwrap();
             let sdl_window = sdl_video
-                .window("rust engine", 800, 600)
+                .window("rust engine", 1024, 768)
                 .opengl()
                 .resizable()
                 .position_centered()
