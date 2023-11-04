@@ -130,15 +130,6 @@ fn update_ecs_gravity_sys(
         obj.comp.0 .0 = obj.comp.0 .0 + obj.comp.1 .0 * dt;
     }
 
-    // if (state.trails.len() > 10000) {
-    //     for obj in query.iter() {
-    //         state.trails(obj.comp.0 .0);
-    //     }
-    // } else {
-    //     for obj in query.iter() {
-    //         state.trails.push(obj.comp.0 .0);
-    //     }
-    // }
     for obj in query.iter() {
         if state.cur_trail_num >= 10000 {
             state.cur_trail_num = 0;

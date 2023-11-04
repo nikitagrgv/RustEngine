@@ -7,6 +7,7 @@ pub struct Time {
     delta_ms: f64,
     delta_s: f64,
     fps: f64,
+    frames: usize,
 }
 
 impl Time {
@@ -21,6 +22,7 @@ impl Time {
             delta_ms: 0f64,
             delta_s: 0f64,
             fps: f64::INFINITY,
+            frames: 0,
         }
     }
 
@@ -32,6 +34,7 @@ impl Time {
             ((self.perf_counter - self.old_perf_counter) * 1000) as f64 / self.perf_freq;
         self.delta_s = self.delta_ms / 1000f64;
         self.fps = 1f64 / self.delta_s;
+        self.frames += 1;
     }
 
     pub fn get_time(&self) -> f64 {
@@ -48,5 +51,9 @@ impl Time {
 
     pub fn get_fps(&self) -> f64 {
         self.fps
+    }
+
+    pub fn get_frames(&self) -> usize {
+        self.frames
     }
 }
