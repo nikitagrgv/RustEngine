@@ -4,12 +4,13 @@ pub mod time;
 
 extern crate gl;
 
-use crate::world::{Entity, World};
 use crate::engine::engine_subsystem::EngineSubsystem;
 use crate::engine::logic::{Logic, LogicFuncType, StateLogic, StateObject};
 use crate::engine::time::Time;
 use crate::input::*;
 use crate::utils;
+use crate::world::{Entity, World};
+use glm::{IVec2, UVec2};
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Scancode};
 
@@ -54,6 +55,21 @@ pub struct Window {
     gl_context: sdl2::video::GLContext,
 }
 
+impl Window {
+    pub fn get_size(&self) -> UVec2 {
+        let size = self.sdl_window.size();
+        UVec2::new(size.0, size.1)
+    }
+
+    pub fn get_width(&self) -> u32 {
+        self.sdl_window.size().0
+    }
+
+    pub fn get_height(&self) -> u32 {
+        self.sdl_window.size().1
+    }
+}
+
 pub struct Engine {
     world: World,
     exit_flag: bool,
@@ -90,6 +106,16 @@ impl EngineSubsystem for World {
 
     fn get_mut<'a>(engine: &'a mut Engine) -> &'a mut Self {
         &mut engine.world
+    }
+}
+
+impl EngineSubsystem for Window {
+    fn get<'a>(engine: &'a Engine) -> &'a Self {
+        &engine.window
+    }
+
+    fn get_mut<'a>(engine: &'a mut Engine) -> &'a mut Self {
+        &mut engine.window
     }
 }
 

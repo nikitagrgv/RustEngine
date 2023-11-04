@@ -53,11 +53,10 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match unsafe { self.query.fetch_entity(self.cur_entity) } {
-                FetchResult::Some(c) => {
-                    break Some(QueryIterItem {
-                        ent: self.cur_entity,
-                        comp: c,
-                    });
+                FetchResult::Some(comp) => {
+                    let ent = self.cur_entity;
+                    self.cur_entity.0 += 1;
+                    break Some(QueryIterItem { ent, comp });
                 }
                 FetchResult::None => self.cur_entity.0 += 1,
                 FetchResult::End => {
@@ -71,6 +70,9 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T> {
 /// QueryIterMut
 pub struct QueryIterMut<'q, 'w: 'q, T: Fetcherable> {
     query: &'q Query<'w, T>,
+    // TODO: shit?
+    // Needed for skipping iterator - we need to know what entity to skip
+    last_given_entity: Option<Entity>,
     cur_entity: Entity,
     marker: PhantomData<&'q mut Query<'w, T>>,
 }
@@ -79,17 +81,19 @@ impl<'q, 'w: 'q, T: Fetcherable> QueryIterMut<'q, 'w, T> {
     pub fn new(query: &'q Query<'w, T>) -> Self {
         Self {
             query,
+            last_given_entity: None,
             cur_entity: Entity::from_num(0),
             marker: PhantomData,
         }
     }
 
-    pub fn iter_skipping_current(&self) -> QueryIterSkip<'q, 'w, T>
-    {
+    pub fn iter_skipping_current(&self) -> QueryIterSkip<'q, 'w, T> {
         QueryIterSkip {
             query: self.query,
             cur_entity: Entity::from_num(0),
-            skip_entity: self.cur_entity,
+            skip_entity: self
+                .last_given_entity
+                .expect("No current item. Don't call this method before or after iterating"),
         }
     }
 }
@@ -105,14 +109,15 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterMut<'q, 'w, T> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match unsafe { self.query.fetch_entity_mut(self.cur_entity) } {
-                FetchResult::Some(c) => {
-                    break Some(QueryIterMutItem {
-                        ent: self.cur_entity,
-                        comp: c,
-                    });
+                FetchResult::Some(comp) => {
+                    let ent = self.cur_entity;
+                    self.last_given_entity = Some(ent);
+                    self.cur_entity.0 += 1;
+                    break Some(QueryIterMutItem { ent, comp });
                 }
                 FetchResult::None => self.cur_entity.0 += 1,
                 FetchResult::End => {
+                    self.last_given_entity = None;
                     break None;
                 }
             }
@@ -124,7 +129,7 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterMut<'q, 'w, T> {
 pub struct QueryIterSkip<'q, 'w: 'q, T: Fetcherable> {
     query: &'q Query<'w, T>,
     cur_entity: Entity,
-    skip_entity: Entity
+    skip_entity: Entity,
 }
 
 impl<'q, 'w: 'q, T: Fetcherable> QueryIterSkip<'q, 'w, T> {
@@ -142,17 +147,15 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterSkip<'q, 'w, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            if (self.cur_entity == self.skip_entity)
-            {
+            if (self.cur_entity == self.skip_entity) {
                 self.cur_entity.0 += 1;
             }
 
             match unsafe { self.query.fetch_entity(self.cur_entity) } {
-                FetchResult::Some(c) => {
-                    break Some(QueryIterItem {
-                        ent: self.cur_entity,
-                        comp: c,
-                    });
+                FetchResult::Some(comp) => {
+                    let ent = self.cur_entity;
+                    self.cur_entity.0 += 1;
+                    break Some(QueryIterItem { ent, comp });
                 }
                 FetchResult::None => self.cur_entity.0 += 1,
                 FetchResult::End => {
