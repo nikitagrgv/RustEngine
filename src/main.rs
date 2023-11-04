@@ -65,8 +65,12 @@ impl GravitySystemState {
         let w = screen_coords.w;
         let pos_x = screen_coords.x / w;
         let pos_y = screen_coords.y / w;
+        let pos_z = screen_coords.z / w;
 
-        if !(-1.0..1.0).contains(&pos_x) || !(-1.0..1.0).contains(&pos_y) {
+        if !(-1.0..1.0).contains(&pos_x)
+            || !(-1.0..1.0).contains(&pos_y)
+            || !(-1.0..1.0).contains(&pos_z)
+        {
             return None;
         }
 
@@ -111,14 +115,14 @@ fn update_gravity_sys(
     }
 
     let multiplier = if input.is_key_down(Scancode::LShift) {
-        20.0
+        50.0
     } else {
-        5.0
+        8.0
     };
 
-    let local_dir = state.camera_transform * dir;
-    let move_delta = local_dir * dt * multiplier;
-    state.camera_transform = glm::translate(&state.camera_transform, &move_delta.xyz());
+    state.camera_transform = state
+        .camera_transform
+        .prepend_translation(&(dir.xyz() * dt * multiplier));
 
     let mut pitch = 0.0;
     if input.is_key_down(Scancode::Left) {
@@ -127,16 +131,16 @@ fn update_gravity_sys(
     if input.is_key_down(Scancode::Right) {
         pitch += 1.0;
     }
-    state.camera_transform = glm::rotate_z(&state.camera_transform, pitch * dt * 5.0.to_radians());
+    state.camera_transform = glm::rotate_y(&state.camera_transform, pitch * dt * 15.0.to_radians());
 
-    let mut pitch = 0.0;
+    let mut yaw = 0.0;
     if input.is_key_down(Scancode::Up) {
-        pitch -= 1.0;
+        yaw -= 1.0;
     }
     if input.is_key_down(Scancode::Down) {
-        pitch += 1.0;
+        yaw += 1.0;
     }
-    state.camera_transform = glm::rotate_x(&state.camera_transform, pitch * dt * 5.0.to_radians());
+    state.camera_transform = glm::rotate_x(&state.camera_transform, yaw * dt * 15.0.to_radians());
 }
 
 fn update_ecs_gravity_sys(
