@@ -52,18 +52,28 @@ struct GravitySystemState {
     cur_trail_num: usize,
     trails: Vec<DVec3>,
 
-    view_transform: glm::DMat4,
+    camera_transform: glm::DMat4,
+    proj_view: glm::DMat4,
 }
 
 impl GravitySystemState {
     // TODO: no window_size
-    fn to_screen_coords(&self, coords: DVec3, window_size: UVec2) -> IVec2 {
-        let coords = self.view_transform * DVec4::new(coords.x, coords.y, coords.z, 1.0);
-        let rel_coords = self.view_transform * coords;
-        IVec2::new(
-            rel_coords.x as i32 + ((window_size.x / 2) as i32),
-            rel_coords.y as i32 + ((window_size.y / 2) as i32),
-        )
+    fn to_screen_coords(&self, coords: DVec3, window_size: UVec2) -> Option<IVec2> {
+        let coords = DVec4::new(coords.x, coords.y, coords.z, 1.0);
+        let screen_coords = self.proj_view * coords;
+
+        let w = screen_coords.w;
+        let pos_x = screen_coords.x / w;
+        let pos_y = screen_coords.y / w;
+
+        if !(-1.0..1.0).contains(&pos_x) || !(-1.0..1.0).contains(&pos_y) {
+            return None;
+        }
+
+        Some(IVec2::new(
+            (pos_x * window_size.x as f64 / 2.0 + window_size.x as f64 / 2.0) as i32,
+            (pos_y * window_size.y as f64 / 2.0 + window_size.y as f64 / 2.0) as i32,
+        ))
     }
 }
 
@@ -80,42 +90,90 @@ fn update_gravity_sys(
     let time = ei.get_subsystem::<Time>();
     let dt = time.get_delta();
 
-    let mut scale = 1.0;
-    if input.is_key_down(Scancode::Q) {
-        scale /= (1.0 + 2.0 * dt);
-    }
-    if input.is_key_down(Scancode::E) {
-        scale *= (1.0 + 2.0 * dt);
-    }
-    state.view_transform.m11 *= scale;
-    state.view_transform.m22 *= scale;
-    state.view_transform.m33 *= scale;
-
-    let mut move_dir = DVec4::zero();
+    let mut dir = DVec4::zero();
     if input.is_key_down(Scancode::A) {
-        move_dir.x += 1.0;
+        dir.x -= 1.0;
     }
     if input.is_key_down(Scancode::D) {
-        move_dir.x -= 1.0;
+        dir.x += 1.0;
     }
     if input.is_key_down(Scancode::W) {
-        move_dir.y -= 1.0;
+        dir.z -= 1.0;
     }
     if input.is_key_down(Scancode::S) {
-        move_dir.y += 1.0;
+        dir.z += 1.0;
     }
-    let move_delta = state.view_transform * move_dir * 10.0;
-    let new_pos = state.view_transform.column(3) + move_delta;
-    state.view_transform.set_column(3, &new_pos);
+    if input.is_key_down(Scancode::Q) {
+        dir.y -= 1.0;
+    }
+    if input.is_key_down(Scancode::E) {
+        dir.y += 1.0;
+    }
 
-    let mut rotate_z = 0.0;
+    let multiplier = if input.is_key_down(Scancode::LShift) {
+        20.0
+    } else {
+        5.0
+    };
+
+    let local_dir = state.camera_transform * dir;
+    let move_delta = local_dir * dt * multiplier;
+    state.camera_transform = glm::translate(&state.camera_transform, &move_delta.xyz());
+
+    let mut pitch = 0.0;
     if input.is_key_down(Scancode::Left) {
-        rotate_z -= 1.0;
+        pitch -= 1.0;
     }
     if input.is_key_down(Scancode::Right) {
-        rotate_z += 1.0;
+        pitch += 1.0;
     }
-    state.view_transform = glm::rotate_y(&state.view_transform, rotate_z * dt);
+    state.camera_transform = glm::rotate_z(&state.camera_transform, pitch * dt * 5.0.to_radians());
+
+    let mut pitch = 0.0;
+    if input.is_key_down(Scancode::Up) {
+        pitch -= 1.0;
+    }
+    if input.is_key_down(Scancode::Down) {
+        pitch += 1.0;
+    }
+    state.camera_transform = glm::rotate_x(&state.camera_transform, pitch * dt * 5.0.to_radians());
+
+    // let mut scale = 1.0;
+    // if input.is_key_down(Scancode::Q) {
+    //     scale /= (1.0 + 2.0 * dt);
+    // }
+    // if input.is_key_down(Scancode::E) {
+    //     scale *= (1.0 + 2.0 * dt);
+    // }
+    // state.camera_transform.m11 /= scale;
+    // state.camera_transform.m22 /= scale;
+    // state.camera_transform.m33 /= scale;
+    //
+    // let mut move_dir = DVec4::zero();
+    // if input.is_key_down(Scancode::A) {
+    //     move_dir.x += 1.0;
+    // }
+    // if input.is_key_down(Scancode::D) {
+    //     move_dir.x -= 1.0;
+    // }
+    // if input.is_key_down(Scancode::W) {
+    //     move_dir.y -= 1.0;
+    // }
+    // if input.is_key_down(Scancode::S) {
+    //     move_dir.y += 1.0;
+    // }
+    // let move_delta = state.camera_transform * move_dir * 10.0;
+    // let new_pos = state.camera_transform.column(3) + move_delta;
+    // state.camera_transform.set_column(3, &new_pos);
+    //
+    // let mut rotate_z = 0.0;
+    // if input.is_key_down(Scancode::Left) {
+    //     rotate_z -= 1.0;
+    // }
+    // if input.is_key_down(Scancode::Right) {
+    //     rotate_z += 1.0;
+    // }
+    // state.camera_transform = glm::rotate_y(&state.camera_transform, rotate_z * dt);
 }
 
 fn update_ecs_gravity_sys(
@@ -156,7 +214,7 @@ fn update_ecs_gravity_sys(
         }
         state.cur_trail_num += 1;
     }
-    println!("TRAILS : {}", state.trails.len())
+    // println!("TRAILS : {}", state.trails.len())
 }
 
 fn print_positions(
@@ -181,6 +239,10 @@ fn render_positions(
 
     let window = ei.get_subsystem::<Window>();
     let ws = window.get_size();
+    let aspect = ws.x as f64 / ws.y as f64;
+    let proj = glm::perspective(aspect, 60.0.to_radians(), 0.01, 1000000.0);
+    let view = state.camera_transform.try_inverse().unwrap();
+    state.proj_view = proj * view;
 
     unsafe {
         gl::Disablei(SCISSOR_TEST, 0);
@@ -189,7 +251,10 @@ fn render_positions(
 
         // render trails
         for trail in &state.trails {
-            let pos = state.to_screen_coords(*trail, ws);
+            let pos = match state.to_screen_coords(*trail, ws) {
+                None => continue,
+                Some(p) => p,
+            };
             gl::Enablei(SCISSOR_TEST, 0);
             gl::Scissor(
                 pos.x - HALF_SIZE / 2,
@@ -202,7 +267,10 @@ fn render_positions(
         }
 
         for obj in query.iter() {
-            let pos = state.to_screen_coords(obj.comp.0, ws);
+            let pos = match state.to_screen_coords(obj.comp.0, ws) {
+                None => continue,
+                Some(p) => p,
+            };
             gl::Enablei(SCISSOR_TEST, 0);
             gl::Scissor(pos.x - HALF_SIZE, pos.y - HALF_SIZE, OBJ_SIZE, OBJ_SIZE);
             gl::ClearColor(0.9, 0.9, 0.9, 1.0);
@@ -291,7 +359,8 @@ fn main() {
             gravity_constant: 6.6743e-11,
             cur_trail_num: 0,
             trails: Vec::new(),
-            view_transform: DMat4::one(),
+            camera_transform: DMat4::one(),
+            proj_view: DMat4::one(),
         };
         let mut gravity_logic = StateLogic::new(gravity_state);
         gravity_logic.add_function(init_gravity_sys, LogicFuncType::Init);
