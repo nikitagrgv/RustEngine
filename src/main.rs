@@ -1,4 +1,4 @@
-extern crate glm;
+extern crate nalgebra_glm as glm;
 extern crate num;
 extern crate sdl2;
 
@@ -17,7 +17,7 @@ use crate::num::*;
 use crate::world::*;
 use gl::types::{GLfloat, GLint, GLuint};
 use gl::SCISSOR_TEST;
-use glm::{clamp, cos, sin, DVec2, DVec3, GenNum, IVec2, UVec2, Vec2, Vec3};
+use glm::{clamp, cos, sin, DMat4, DVec2, DVec3, DVec4, IVec2, UVec2, Vec2, Vec3};
 use sdl2::keyboard::Scancode;
 use std::ops::{Deref, DerefMut};
 
@@ -49,20 +49,20 @@ thing_component_wrapper!(Velocity, DVec3);
 struct GravitySystemState {
     gravity_constant: f64,
 
-    center: DVec2,
-    scale: f64,
-
     cur_trail_num: usize,
     trails: Vec<DVec3>,
+
+    view_transform: glm::DMat4,
 }
 
 impl GravitySystemState {
     // TODO: no window_size
-    fn to_screen_coords(&self, coords: DVec2, window_size: UVec2) -> IVec2 {
-        let rel_coords = coords - self.center;
+    fn to_screen_coords(&self, coords: DVec3, window_size: UVec2) -> IVec2 {
+        let coords = self.view_transform * DVec4::new(coords.x, coords.y, coords.z, 1.0);
+        let rel_coords = self.view_transform * coords;
         IVec2::new(
-            (rel_coords.x * self.scale) as i32 + ((window_size.x / 2) as i32),
-            (rel_coords.y * self.scale) as i32 + ((window_size.y / 2) as i32),
+            rel_coords.x as i32 + ((window_size.x / 2) as i32),
+            rel_coords.y as i32 + ((window_size.y / 2) as i32),
         )
     }
 }
@@ -80,28 +80,42 @@ fn update_gravity_sys(
     let time = ei.get_subsystem::<Time>();
     let dt = time.get_delta();
 
+    let mut scale = 1.0;
     if input.is_key_down(Scancode::Q) {
-        state.scale /= (1.0 + 4.0 * dt);
+        scale /= (1.0 + 2.0 * dt);
     }
     if input.is_key_down(Scancode::E) {
-        state.scale *= (1.0 + 4.0 * dt);
+        scale *= (1.0 + 2.0 * dt);
     }
+    state.view_transform.m11 *= scale;
+    state.view_transform.m22 *= scale;
+    state.view_transform.m33 *= scale;
 
-    let mut move_dir = DVec2::zero();
+    let mut move_dir = DVec4::zero();
     if input.is_key_down(Scancode::A) {
-        move_dir.x -= 1.0;
-    }
-    if input.is_key_down(Scancode::D) {
         move_dir.x += 1.0;
     }
-    if input.is_key_down(Scancode::W) {
-        move_dir.y += 1.0;
+    if input.is_key_down(Scancode::D) {
+        move_dir.x -= 1.0;
     }
-    if input.is_key_down(Scancode::S) {
+    if input.is_key_down(Scancode::W) {
         move_dir.y -= 1.0;
     }
-    move_dir = move_dir / state.scale * 10.0;
-    state.center = state.center + move_dir;
+    if input.is_key_down(Scancode::S) {
+        move_dir.y += 1.0;
+    }
+    let move_delta = state.view_transform * move_dir * 10.0;
+    let new_pos = state.view_transform.column(3) + move_delta;
+    state.view_transform.set_column(3, &new_pos);
+
+    let mut rotate_z = 0.0;
+    if input.is_key_down(Scancode::Left) {
+        rotate_z -= 1.0;
+    }
+    if input.is_key_down(Scancode::Right) {
+        rotate_z += 1.0;
+    }
+    state.view_transform = glm::rotate_y(&state.view_transform, rotate_z * dt);
 }
 
 fn update_ecs_gravity_sys(
@@ -118,7 +132,7 @@ fn update_ecs_gravity_sys(
         let mut sum_accel = DVec3::zero();
         for attractor in attractable_iterator.iter_skipping_current() {
             let to_attractor = attractor.comp.0 .0 - attractable.comp.0 .0;
-            let distance = to_attractor.length();
+            let distance = to_attractor.magnitude();
             let force = to_attractor
                 * (state.gravity_constant * attractor.comp.2 .0 / (distance * distance * distance));
             sum_accel = sum_accel + force;
@@ -175,7 +189,7 @@ fn render_positions(
 
         // render trails
         for trail in &state.trails {
-            let pos = state.to_screen_coords(DVec2::new(trail.x, trail.y), ws);
+            let pos = state.to_screen_coords(*trail, ws);
             gl::Enablei(SCISSOR_TEST, 0);
             gl::Scissor(
                 pos.x - HALF_SIZE / 2,
@@ -188,7 +202,7 @@ fn render_positions(
         }
 
         for obj in query.iter() {
-            let pos = state.to_screen_coords(DVec2::new(obj.comp.0.x, obj.comp.0.y), ws);
+            let pos = state.to_screen_coords(obj.comp.0, ws);
             gl::Enablei(SCISSOR_TEST, 0);
             gl::Scissor(pos.x - HALF_SIZE, pos.y - HALF_SIZE, OBJ_SIZE, OBJ_SIZE);
             gl::ClearColor(0.9, 0.9, 0.9, 1.0);
@@ -275,10 +289,9 @@ fn main() {
     {
         let gravity_state = GravitySystemState {
             gravity_constant: 6.6743e-11,
-            center: DVec2::zero(),
-            scale: 1.0,
             cur_trail_num: 0,
             trails: Vec::new(),
+            view_transform: DMat4::one(),
         };
         let mut gravity_logic = StateLogic::new(gravity_state);
         gravity_logic.add_function(init_gravity_sys, LogicFuncType::Init);

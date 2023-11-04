@@ -9,7 +9,7 @@ profiler = []
 
 [dependencies]
 gl = "*"
-glm = "*"
+nalgebra-glm = "*"
 sdl2 = "*"
 num = "*"
 pprof = { version = "*", features = ["flamegraph"] }
