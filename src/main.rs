@@ -19,8 +19,8 @@ use gl::types::{GLfloat, GLint, GLuint};
 use gl::SCISSOR_TEST;
 use glm::{clamp, cos, sin, DMat4, DVec2, DVec3, DVec4, IVec2, UVec2, Vec2, Vec3};
 use sdl2::keyboard::Scancode;
-use std::ops::{Deref, DerefMut};
 use sdl2::mouse::MouseButton;
+use std::ops::{Deref, DerefMut};
 
 macro_rules! thing_component_wrapper {
     ($name: ident, $base: ty) => {
@@ -95,15 +95,6 @@ fn update_gravity_sys(
     let time = ei.get_subsystem::<Time>();
     let dt = time.get_delta();
 
-
-    if input.is_mouse_down(MouseButton::Left)
-    {
-        println!("PRESSED");
-    }
-
-
-
-
     let mut dir = DVec4::zero();
     if input.is_key_down(Scancode::A) {
         dir.x -= 1.0;
@@ -134,27 +125,15 @@ fn update_gravity_sys(
         .camera_transform
         .prepend_translation(&(dir.xyz() * dt * multiplier));
 
-    {
-        let mut delta_pitch = 0.0;
-        if input.is_key_down(Scancode::Left) {
-            delta_pitch += 1.0;
-        }
-        if input.is_key_down(Scancode::Right) {
-            delta_pitch -= 1.0;
-        }
-
-        let mut delta_yaw = 0.0;
-        if input.is_key_down(Scancode::Up) {
-            delta_yaw -= 1.0;
-        }
-        if input.is_key_down(Scancode::Down) {
-            delta_yaw += 1.0;
-        }
-        let multiplier = 15.0.to_radians();
+    if input.is_mouse_down(MouseButton::Right) {
+        let multiplier = 12.0.to_radians();
+        let mouse_delta = input.get_mouse_delta();
+        let delta_pitch = -mouse_delta.x as f64 * multiplier;
+        let delta_yaw = -mouse_delta.y as f64 * multiplier;
 
         let pos = state.camera_transform.column(3);
-        let pitch_rot = glm::rotation(delta_pitch * dt * multiplier, &DVec3::y_axis());
-        let yaw_rot = glm::rotation(delta_yaw * dt * multiplier, &DVec3::x_axis());
+        let pitch_rot = glm::rotation(delta_pitch * dt, &DVec3::y_axis());
+        let yaw_rot = glm::rotation(delta_yaw * dt, &DVec3::x_axis());
         let mut new_transform = pitch_rot * state.camera_transform * yaw_rot;
         new_transform.set_column(3, &pos);
         state.camera_transform = new_transform;
