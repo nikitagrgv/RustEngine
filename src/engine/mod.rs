@@ -4,7 +4,7 @@ pub mod time;
 
 extern crate gl;
 
-use crate::ecs::World;
+use crate::world::{Entity, World};
 use crate::engine::engine_subsystem::EngineSubsystem;
 use crate::engine::logic::{Logic, LogicFuncType, StateLogic, StateObject};
 use crate::engine::time::Time;
@@ -98,6 +98,7 @@ impl Engine {
         #[cfg(feature = "profiler")]
         let perf = crate::utils::scoped_perf::ScopedPerf::new();
 
+        // init window
         let window = {
             let sdl_context = sdl2::init().unwrap();
             let sdl_video = sdl_context.video().unwrap();
@@ -130,9 +131,13 @@ impl Engine {
             }
         };
 
+        // init input
         let input = Input::new(window.sdl_context.event_pump().unwrap());
 
+        // init time
         let time = Time::new(window.sdl_context.timer().unwrap());
+
+        // init ecs
 
         Self {
             world: World::new(),

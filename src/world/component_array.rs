@@ -1,4 +1,4 @@
-use crate::ecs::{Component, Entity};
+use crate::world::{Component, Entity};
 use std::any::Any;
 use std::cell::{Cell, UnsafeCell};
 use std::marker::PhantomData;
@@ -6,7 +6,7 @@ use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 
 /// ComponentArray
-pub(in crate::ecs) trait ComponentArray {
+pub(in crate::world) trait ComponentArray {
     fn push_none(&mut self);
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;

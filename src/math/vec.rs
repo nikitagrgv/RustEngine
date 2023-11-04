@@ -1,6 +1,7 @@
 extern crate glm;
 
 use glm::{DVec2, DVec3, Vec2, Vec3};
+use std::ops::Div;
 
 /// Length
 pub trait Length {
@@ -54,5 +55,19 @@ impl Length for DVec3 {
 
     fn length(&self) -> Self::Ret {
         glm::sqrt(self.length2())
+    }
+}
+
+/// Normalize
+pub trait Normalize {
+    fn normalize(&self) -> Self;
+}
+
+impl<T> Normalize for T
+where
+    T: Length + Copy + Div<T::Ret, Output = T>,
+{
+    fn normalize(&self) -> Self {
+        *self / self.length()
     }
 }

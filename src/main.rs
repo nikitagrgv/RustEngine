@@ -2,32 +2,49 @@ extern crate glm;
 extern crate num;
 extern crate sdl2;
 
-mod ecs;
 mod engine;
 mod input;
 mod math;
 mod utils;
+mod world;
 
-use gl::SCISSOR_TEST;
-use gl::types::{GLfloat, GLint, GLuint};
-use crate::ecs::*;
 use crate::engine::logic::*;
 use crate::engine::time::Time;
 use crate::engine::*;
 use crate::input::Input;
 use crate::math::*;
 use crate::num::*;
-use glm::{clamp, cos, DVec3, GenNum, sin, Vec3};
+use crate::world::*;
+use gl::types::{GLfloat, GLint, GLuint};
+use gl::SCISSOR_TEST;
+use glm::{clamp, cos, sin, DVec3, GenNum, Vec3};
 use sdl2::keyboard::Scancode;
+use std::ops::{Deref, DerefMut};
 
-#[derive(Clone, Copy, Debug)]
-struct Position(DVec3);
+macro_rules! thing_component_wrapper {
+    ($name: ident, $base: ty) => {
+        #[derive(Clone, Copy, Debug)]
+        struct $name($base);
 
-#[derive(Clone, Copy, Debug)]
-struct Mass(f64);
+        impl Deref for $name {
+            type Target = $base;
 
-#[derive(Clone, Copy, Debug)]
-struct Velocity(DVec3);
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl DerefMut for $name {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+    };
+}
+
+thing_component_wrapper!(Position, DVec3);
+thing_component_wrapper!(Mass, f64);
+thing_component_wrapper!(Velocity, DVec3);
 
 struct GravitySystemState {
     gravity_constant: f64,
@@ -50,23 +67,16 @@ fn update_ecs_gravity_sys(
     ei: &EngineInterface,
     commands: &mut Commands,
 ) {
-    for attractable in query.iter() {
-        let mut sum_force = DVec3::zero();
-        for attractor in query.iter() {
-            if attractor.ent == attractable.ent {
-                continue;
-            }
-
+    let mut attractable_iterator = query.iter_mut();
+    while let Some(attractable) = attractable_iterator.next() {
+        let mut sum_accel = DVec3::zero();
+        for attractor in attractable_iterator.iter_skipping_current() {
             let to_attractor = attractor.comp.0 .0 - attractable.comp.0 .0;
             let distance = to_attractor.length();
-            // TODO: shit! glm huita!
-            let tmp = state.gravity_constant * attractor.comp.2 .0 * attractable.comp.2 .0
-                / (distance * distance * distance);
-            let force = to_attractor.map(|v| v * tmp);
-            // TODO: glm is shit!
-            sum_force = sum_force.zip(force, |v1, v2| v1 + v2);
+            let force = to_attractor
+                * (state.gravity_constant * attractor.comp.2 .0 / (distance * distance * distance));
+            sum_accel = sum_accel + force;
         }
-        // TODO!
     }
 }
 
@@ -118,8 +128,7 @@ fn main() {
             if time.get_time() - *last_fps_print_time > 1.0 {
                 *last_fps_print_time = time.get_time();
                 println!("FPS: {}", time.get_fps());
-            }
-            else {
+            } else {
                 *last_fps_print_time -= 0.001;
             }
         }
@@ -142,11 +151,14 @@ fn main() {
                 let i7 = (f7 * 61.0 + f7) as GLint;
                 let i8 = (f8 * 51.0 + f1) as GLint;
                 gl::Enablei(SCISSOR_TEST, 0);
-                gl::Scissor(200+i1, 200+i2, i3, i4);
-                gl::Viewport(200+i2, 200+i3, i4, i1);
-                gl::ClearColor(sin(*last_fps_print_time as GLfloat * 15000.0) / 2.0 + 0.5,
-                               sin(*last_fps_print_time as GLfloat * 15001.0) / 2.0 + 0.5,
-                               sin(*last_fps_print_time as GLfloat * 15002.0) / 2.0 + 0.5, 1.0);
+                gl::Scissor(200 + i1, 200 + i2, i3, i4);
+                gl::Viewport(200 + i2, 200 + i3, i4, i1);
+                gl::ClearColor(
+                    sin(*last_fps_print_time as GLfloat * 15000.0) / 2.0 + 0.5,
+                    sin(*last_fps_print_time as GLfloat * 15001.0) / 2.0 + 0.5,
+                    sin(*last_fps_print_time as GLfloat * 15002.0) / 2.0 + 0.5,
+                    1.0,
+                );
             }
         }
         basic_logic.add_function(update, LogicFuncType::Update);

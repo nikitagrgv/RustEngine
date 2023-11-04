@@ -1,10 +1,42 @@
-use crate::ecs::component::Component;
-use crate::ecs::entity::Entity;
-use crate::ecs::{CACell, ComponentArray, Fetcherable, Query};
+use crate::world::component::Component;
+use crate::world::entity::Entity;
+use crate::world::{CACell, ComponentArray, Fetcherable, Query};
 use std::any::TypeId;
 use std::collections::HashMap;
 
+// struct HierarchyNode {
+//     // TODO: use NonNull?
+//     parent: Option<Entity>,
+//     children: Vec<Entity>,
+// }
+//
+// impl HierarchyNode {
+//     fn new() -> Self {
+//         Self {
+//             parent: None,
+//             children: Vec::new(),
+//         }
+//     }
+//
+//     fn is_child(&self, e: Entity) -> bool {
+//         self.children.contains(&e)
+//     }
+//
+//     fn is_parent(&self, e: Entity) -> bool {
+//         match self.parent {
+//             None => false,
+//             Some(parent) => parent == e,
+//         }
+//     }
+//
+//     fn has_parent(&self) -> bool {
+//         self.parent.is_some()
+//     }
+// }
+
 pub struct World {
+    // // idx - entity id
+    // entities: Vec<HierarchyNode>,
     entities_count: usize,
     component_arrays: HashMap<TypeId, Box<dyn ComponentArray>>,
 }
@@ -12,6 +44,7 @@ pub struct World {
 impl World {
     pub fn new() -> Self {
         Self {
+            // entities: Vec::new(),
             entities_count: 0,
             component_arrays: HashMap::new(),
         }

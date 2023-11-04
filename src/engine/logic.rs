@@ -1,4 +1,4 @@
-use crate::ecs::*;
+use crate::world::*;
 use crate::engine::{Commands, EngineInterface};
 
 #[derive(Eq, PartialEq, Copy, Clone)]

@@ -1,4 +1,4 @@
-use crate::ecs::{CARef, CARefMut, Component, Entity, World};
+use crate::world::{CARef, CARefMut, Component, Entity, World};
 use std::marker::PhantomData;
 
 pub struct Query<'w, T: Fetcherable> {
@@ -11,11 +11,11 @@ impl<'w, T: Fetcherable> Query<'w, T> {
         Self { fetch }
     }
 
-    pub fn fetch_entity<'q>(&'q self, entity: Entity) -> FetchResult<T::Item<'q>> {
+    pub unsafe fn fetch_entity<'q>(&'q self, entity: Entity) -> FetchResult<T::Item<'q>> {
         T::fetch_entity(&self.fetch, entity)
     }
 
-    pub fn fetch_entity_mut<'q>(&'q self, entity: Entity) -> FetchResult<T::ItemMut<'q>> {
+    pub unsafe fn fetch_entity_mut<'q>(&'q self, entity: Entity) -> FetchResult<T::ItemMut<'q>> {
         T::fetch_entity_mut(&self.fetch, entity)
     }
 
@@ -51,23 +51,20 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIter<'q, 'w, T> {
     type Item = QueryIterItem<'q, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut cur_entity = self.cur_entity;
-        let next = loop {
-            match self.query.fetch_entity(cur_entity) {
+        loop {
+            match unsafe { self.query.fetch_entity(self.cur_entity) } {
                 FetchResult::Some(c) => {
                     break Some(QueryIterItem {
-                        ent: cur_entity,
+                        ent: self.cur_entity,
                         comp: c,
                     });
                 }
-                FetchResult::None => cur_entity.0 += 1,
+                FetchResult::None => self.cur_entity.0 += 1,
                 FetchResult::End => {
                     break None;
                 }
             }
-        };
-        self.cur_entity.0 += 1;
-        next
+        }
     }
 }
 
@@ -86,6 +83,15 @@ impl<'q, 'w: 'q, T: Fetcherable> QueryIterMut<'q, 'w, T> {
             marker: PhantomData,
         }
     }
+
+    pub fn iter_skipping_current(&self) -> QueryIterSkip<'q, 'w, T>
+    {
+        QueryIterSkip {
+            query: self.query,
+            cur_entity: Entity::from_num(0),
+            skip_entity: self.cur_entity,
+        }
+    }
 }
 
 pub struct QueryIterMutItem<'q, T: Fetcherable> {
@@ -97,23 +103,63 @@ impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterMut<'q, 'w, T> {
     type Item = QueryIterMutItem<'q, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut cur_entity = self.cur_entity;
-        let next = loop {
-            match self.query.fetch_entity_mut(cur_entity) {
+        loop {
+            match unsafe { self.query.fetch_entity_mut(self.cur_entity) } {
                 FetchResult::Some(c) => {
                     break Some(QueryIterMutItem {
-                        ent: cur_entity,
+                        ent: self.cur_entity,
                         comp: c,
                     });
                 }
-                FetchResult::None => cur_entity.0 += 1,
+                FetchResult::None => self.cur_entity.0 += 1,
                 FetchResult::End => {
                     break None;
                 }
             }
-        };
-        self.cur_entity.0 += 1;
-        next
+        }
+    }
+}
+
+/// QueryIterSkip
+pub struct QueryIterSkip<'q, 'w: 'q, T: Fetcherable> {
+    query: &'q Query<'w, T>,
+    cur_entity: Entity,
+    skip_entity: Entity
+}
+
+impl<'q, 'w: 'q, T: Fetcherable> QueryIterSkip<'q, 'w, T> {
+    pub fn new(query: &'q Query<'w, T>, skip_entity: Entity) -> Self {
+        Self {
+            query,
+            cur_entity: Entity::from_num(0),
+            skip_entity,
+        }
+    }
+}
+
+impl<'q, 'w: 'q, T: Fetcherable> Iterator for QueryIterSkip<'q, 'w, T> {
+    type Item = QueryIterItem<'q, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if (self.cur_entity == self.skip_entity)
+            {
+                self.cur_entity.0 += 1;
+            }
+
+            match unsafe { self.query.fetch_entity(self.cur_entity) } {
+                FetchResult::Some(c) => {
+                    break Some(QueryIterItem {
+                        ent: self.cur_entity,
+                        comp: c,
+                    });
+                }
+                FetchResult::None => self.cur_entity.0 += 1,
+                FetchResult::End => {
+                    break None;
+                }
+            }
+        }
     }
 }
 
@@ -132,12 +178,12 @@ pub trait Fetcherable {
 
     fn fetch_init<'w>(world: &'w World) -> Self::Fetch<'w>;
 
-    fn fetch_entity<'f, 'w: 'f>(
+    unsafe fn fetch_entity<'f, 'w: 'f>(
         fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::Item<'f>>;
 
-    fn fetch_entity_mut<'f, 'w: 'f>(
+    unsafe fn fetch_entity_mut<'f, 'w: 'f>(
         fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::ItemMut<'f>>;
@@ -153,7 +199,7 @@ impl<T: Component> Fetcherable for &T {
         world.get_component_array::<T>().unwrap().borrow()
     }
 
-    fn fetch_entity<'f, 'w: 'f>(
+    unsafe fn fetch_entity<'f, 'w: 'f>(
         fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::Item<'f>> {
@@ -166,7 +212,7 @@ impl<T: Component> Fetcherable for &T {
         }
     }
 
-    fn fetch_entity_mut<'f, 'w: 'f>(
+    unsafe fn fetch_entity_mut<'f, 'w: 'f>(
         fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::ItemMut<'f>> {
@@ -193,7 +239,7 @@ impl<T: Component> Fetcherable for &mut T {
             .borrow_mut()
     }
 
-    fn fetch_entity<'f, 'w: 'f>(
+    unsafe fn fetch_entity<'f, 'w: 'f>(
         fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::Item<'f>> {
@@ -206,7 +252,7 @@ impl<T: Component> Fetcherable for &mut T {
         }
     }
 
-    fn fetch_entity_mut<'f, 'w: 'f>(
+    unsafe fn fetch_entity_mut<'f, 'w: 'f>(
         fetch: &'f Self::Fetch<'w>,
         entity: Entity,
     ) -> FetchResult<Self::ItemMut<'f>> {
@@ -249,7 +295,7 @@ macro_rules! impl_fetch_for_tuple {
                 ($($type_name::fetch_init(world), )*)
             }
 
-            fn fetch_entity<'f, 'w: 'f>(
+            unsafe fn fetch_entity<'f, 'w: 'f>(
                 fetch: &'f Self::Fetch<'w>,
                 entity: Entity,
             ) -> FetchResult<Self::Item<'f>> {
@@ -262,7 +308,7 @@ macro_rules! impl_fetch_for_tuple {
                 }
             }
 
-            fn fetch_entity_mut<'f, 'w: 'f>(
+            unsafe fn fetch_entity_mut<'f, 'w: 'f>(
                 fetch: &'f Self::Fetch<'w>,
                 entity: Entity,
             ) -> FetchResult<Self::ItemMut<'f>> {

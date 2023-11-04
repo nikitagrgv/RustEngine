@@ -1,7 +1,7 @@
 use glm::DMat4;
 use std::ops::{Deref, DerefMut};
 
-struct Transform(pub DMat4);
+pub struct Transform(pub DMat4);
 
 impl Deref for Transform {
     type Target = DMat4;
