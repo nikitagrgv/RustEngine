@@ -247,6 +247,18 @@ fn main() {
             DVec3::new(50.0, 0.0, 0.0),
         );
 
+        create_phys_entity(
+            world,
+            DVec3::new(0.0, 0.0, 0.0) + DVec3::new(160.0, 160.0, 0.0),
+            5e13,
+            DVec3::new(0.0, 0.0, 0.0) + DVec3::new(40.0, -40.0, 0.0),
+        );
+        create_phys_entity(
+            world,
+            DVec3::new(0.0, 20.0 / 10.0, 0.0) + DVec3::new(160.0, 160.0, 0.0),
+            1e7,
+            DVec3::new(-47.0, 0.0, 0.0) + DVec3::new(40.0, -40.0, 0.0),
+        );
     }
 
     {
