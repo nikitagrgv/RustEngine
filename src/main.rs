@@ -119,9 +119,9 @@ fn update_gravity_sys(
     }
 
     let multiplier = if input.is_key_down(Scancode::LShift) {
-        50.0
+        300.0
     } else {
-        8.0
+        50.0
     };
 
     state.camera_transform = state
@@ -172,7 +172,7 @@ fn update_ecs_gravity_sys(
     }
 
     for obj in query.iter() {
-        if state.cur_trail_num >= 10000 {
+        if state.cur_trail_num >= 40000 {
             state.cur_trail_num = 0;
         }
         let pos = obj.comp.0 .0;
@@ -183,14 +183,9 @@ fn update_ecs_gravity_sys(
         }
         state.cur_trail_num += 1;
     }
-    // println!("TRAILS : {}", state.trails.len())
 }
 
-fn general_update(
-    state: &mut GravitySystemState,
-    ei: &EngineInterface,
-    commands: &mut Commands,
-) {
+fn general_update(state: &mut GravitySystemState, ei: &EngineInterface, commands: &mut Commands) {
     let time = ei.get_subsystem::<Time>();
     let input = ei.get_subsystem::<Input>();
 
@@ -214,6 +209,8 @@ fn render_positions(
 ) {
     const OBJ_SIZE: i32 = 10;
     const HALF_SIZE: i32 = OBJ_SIZE / 2;
+    const TRAIL_SIZE: i32 = 4;
+    const HALF_TRAIL_SIZE: i32 = TRAIL_SIZE / 2;
 
     let window = ei.get_subsystem::<Window>();
     let ws = window.get_size();
@@ -235,10 +232,10 @@ fn render_positions(
             };
             gl::Enablei(SCISSOR_TEST, 0);
             gl::Scissor(
-                pos.x - HALF_SIZE / 2,
-                pos.y - HALF_SIZE / 2,
-                OBJ_SIZE / 2,
-                OBJ_SIZE / 2,
+                pos.x - HALF_TRAIL_SIZE,
+                pos.y - HALF_TRAIL_SIZE,
+                TRAIL_SIZE,
+                TRAIL_SIZE,
             );
             gl::ClearColor(0.6, 0.3, 0.2, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
@@ -319,6 +316,16 @@ fn main() {
             DVec3::new(-47.0, 0.0, 0.0) + DVec3::new(40.0, 0.0, -40.0),
             Vec3::new(0.7, 0.1, 0.2),
         );
+
+        for i in 0..100 {
+            create_phys_entity(
+                world,
+                DVec3::new(0.0, 2.0 + i as f64 / 100.0, 0.0) + DVec3::new(130.0, 0.0, 130.0),
+                1e7,
+                DVec3::new(-35.0, 0.0, 0.0 + i as f64 / 50.0) + DVec3::new(40.0, 0.0, -40.0),
+                Vec3::new(0.1, 0.4, 0.1),
+            );
+        }
     }
 
     {
