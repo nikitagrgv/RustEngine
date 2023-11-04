@@ -56,6 +56,8 @@ struct GravitySystemState {
 
     camera_transform: glm::DMat4,
     proj_view: glm::DMat4,
+
+    last_print_time: f64,
 }
 
 impl GravitySystemState {
@@ -184,15 +186,24 @@ fn update_ecs_gravity_sys(
     // println!("TRAILS : {}", state.trails.len())
 }
 
-fn print_positions(
+fn general_update(
     state: &mut GravitySystemState,
-    mut query: Query<(&Position, &Velocity)>,
     ei: &EngineInterface,
     commands: &mut Commands,
 ) {
-    // for obj in query.iter() {
-    //     println!("ent: {} | pos = {:?}", obj.ent.to_num(), obj.comp.0 .0);
-    // }
+    let time = ei.get_subsystem::<Time>();
+    let input = ei.get_subsystem::<Input>();
+
+    if input.is_key_pressed(Scancode::Escape) {
+        commands.queue_command(Command::Exit);
+    }
+    if time.get_time() - state.last_print_time > 1.0 {
+        state.last_print_time = time.get_time();
+        println!("FPS: {}", time.get_fps());
+        println!("TRAILS : {}", state.trails.len())
+    } else {
+        state.last_print_time -= 0.001;
+    }
 }
 
 fn render_positions(
@@ -311,39 +322,20 @@ fn main() {
     }
 
     {
-        let mut basic_logic = StateLogic::new(0f64);
-        fn update(last_fps_print_time: &mut f64, ei: &EngineInterface, commands: &mut Commands) {
-            let time = ei.get_subsystem::<Time>();
-            let input = ei.get_subsystem::<Input>();
-
-            if input.is_key_pressed(Scancode::Escape) {
-                commands.queue_command(Command::Exit);
-            }
-            if time.get_time() - *last_fps_print_time > 1.0 {
-                *last_fps_print_time = time.get_time();
-                println!("FPS: {}", time.get_fps());
-            } else {
-                *last_fps_print_time -= 0.001;
-            }
-        }
-        basic_logic.add_function(update, LogicFuncType::Update);
-        engine.add_logic(basic_logic);
-    }
-
-    {
         let gravity_state = GravitySystemState {
             gravity_constant: 6.6743e-11,
             cur_trail_num: 0,
             trails: Vec::new(),
             camera_transform: DMat4::one(),
             proj_view: DMat4::one(),
+            last_print_time: 0f64,
         };
         let mut gravity_logic = StateLogic::new(gravity_state);
         gravity_logic.add_function(init_gravity_sys, LogicFuncType::Init);
-        gravity_logic.add_ecs_function(print_positions, LogicFuncType::Init);
+        gravity_logic.add_function(general_update, LogicFuncType::Init);
         gravity_logic.add_function(update_gravity_sys, LogicFuncType::Update);
         gravity_logic.add_ecs_function(update_ecs_gravity_sys, LogicFuncType::Update);
-        gravity_logic.add_ecs_function(print_positions, LogicFuncType::PostUpdate);
+        gravity_logic.add_function(general_update, LogicFuncType::Update);
         gravity_logic.add_ecs_function(render_positions, LogicFuncType::Render);
         engine.add_logic(gravity_logic);
     }
