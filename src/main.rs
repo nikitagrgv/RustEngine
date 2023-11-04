@@ -46,6 +46,7 @@ macro_rules! thing_component_wrapper {
 thing_component_wrapper!(Position, DVec3);
 thing_component_wrapper!(Mass, f64);
 thing_component_wrapper!(Velocity, DVec3);
+thing_component_wrapper!(Color, Vec3);
 
 struct GravitySystemState {
     gravity_constant: f64,
@@ -196,7 +197,7 @@ fn print_positions(
 
 fn render_positions(
     state: &mut GravitySystemState,
-    mut query: Query<(&Position)>,
+    mut query: Query<(&Position, &Color)>,
     ei: &EngineInterface,
     commands: &mut Commands,
 ) {
@@ -233,13 +234,14 @@ fn render_positions(
         }
 
         for obj in query.iter() {
-            let pos = match state.to_screen_coords(obj.comp.0, ws) {
+            let pos = match state.to_screen_coords(obj.comp.0 .0, ws) {
                 None => continue,
                 Some(p) => p,
             };
             gl::Enablei(SCISSOR_TEST, 0);
             gl::Scissor(pos.x - HALF_SIZE, pos.y - HALF_SIZE, OBJ_SIZE, OBJ_SIZE);
-            gl::ClearColor(0.9, 0.9, 0.9, 1.0);
+            let col = obj.comp.1;
+            gl::ClearColor(col.x, col.y, col.z, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
     }
@@ -252,13 +254,15 @@ fn main() {
     world.register_component::<Position>();
     world.register_component::<Mass>();
     world.register_component::<Velocity>();
+    world.register_component::<Color>();
 
     {
-        fn create_phys_entity(world: &mut World, pos: DVec3, mass: f64, vel: DVec3) {
+        fn create_phys_entity(world: &mut World, pos: DVec3, mass: f64, vel: DVec3, col: Vec3) {
             let e = world.create_entity();
             world.set_component(Position(pos), e);
             world.set_component(Mass(mass), e);
             world.set_component(Velocity(vel), e);
+            world.set_component(Color(col), e);
         }
 
         create_phys_entity(
@@ -266,37 +270,43 @@ fn main() {
             DVec3::new(0.0, 0.0, 0.0),
             1e16,
             DVec3::new(0.0, 0.0, 0.0),
+            Vec3::new(0.6, 0.1, 0.2),
         );
         create_phys_entity(
             world,
             DVec3::new(0.0, 20.0, 0.0),
             1e9,
             DVec3::new(-240.0, 0.0, 0.0),
+            Vec3::new(0.1, 0.6, 0.2),
         );
         create_phys_entity(
             world,
             DVec3::new(200.0, 0.0, 0.0),
             1e9,
             DVec3::new(0.0, 30.0, 0.0),
+            Vec3::new(0.1, 0.2, 0.6),
         );
         create_phys_entity(
             world,
             DVec3::new(0.0, 100.0, 0.0),
             1e9,
             DVec3::new(50.0, 0.0, 0.0),
+            Vec3::new(0.5, 0.5, 0.3),
         );
 
         create_phys_entity(
             world,
-            DVec3::new(0.0, 0.0, 0.0) + DVec3::new(160.0, 160.0, 0.0),
+            DVec3::new(0.0, 0.0, 0.0) + DVec3::new(160.0, 0.0, 160.0),
             5e13,
-            DVec3::new(0.0, 0.0, 0.0) + DVec3::new(40.0, -40.0, 0.0),
+            DVec3::new(0.0, 0.0, 0.0) + DVec3::new(40.0, 0.0, -40.0),
+            Vec3::new(0.6, 0.2, 0.6),
         );
         create_phys_entity(
             world,
-            DVec3::new(0.0, 20.0 / 10.0, 0.0) + DVec3::new(160.0, 160.0, 0.0),
+            DVec3::new(0.0, 20.0 / 10.0, 0.0) + DVec3::new(160.0, 0.0, 160.0),
             1e7,
-            DVec3::new(-47.0, 0.0, 0.0) + DVec3::new(40.0, -40.0, 0.0),
+            DVec3::new(-47.0, 0.0, 0.0) + DVec3::new(40.0, 0.0, -40.0),
+            Vec3::new(0.7, 0.1, 0.2),
         );
     }
 
