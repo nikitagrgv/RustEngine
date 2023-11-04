@@ -51,6 +51,8 @@ struct GravitySystemState {
 
     center: DVec2,
     scale: f64,
+
+    trails: Vec<DVec3>,
 }
 
 impl GravitySystemState {
@@ -126,6 +128,15 @@ fn update_ecs_gravity_sys(
     for obj in query.iter_mut() {
         obj.comp.0 .0 = obj.comp.0 .0 + obj.comp.1 .0 * dt;
     }
+
+    // update trails
+    while state.trails.len() > 10000 {
+        state.trails.remove(0);
+    }
+    for obj in query.iter() {
+        state.trails.push(obj.comp.0 .0);
+    }
+    println!("TRAILS : {}", state.trails.len())
 }
 
 fn print_positions(
@@ -134,9 +145,9 @@ fn print_positions(
     ei: &EngineInterface,
     commands: &mut Commands,
 ) {
-    for obj in query.iter() {
-        println!("ent: {} | pos = {:?}", obj.ent.to_num(), obj.comp.0 .0);
-    }
+    // for obj in query.iter() {
+    //     println!("ent: {} | pos = {:?}", obj.ent.to_num(), obj.comp.0 .0);
+    // }
 }
 
 fn render_positions(
@@ -145,6 +156,9 @@ fn render_positions(
     ei: &EngineInterface,
     commands: &mut Commands,
 ) {
+    const OBJ_SIZE: i32 = 10;
+    const HALF_SIZE: i32 = OBJ_SIZE / 2;
+
     let window = ei.get_subsystem::<Window>();
     let ws = window.get_size();
 
@@ -153,10 +167,17 @@ fn render_positions(
         gl::ClearColor(0.0, 0.0, 0.0, 1.0);
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
-        for obj in query.iter() {
-            const OBJ_SIZE: i32 = 10;
-            const HALF_SIZE: i32 = OBJ_SIZE / 2;
+        // render trails
+        for trail in &state.trails
+        {
+            let pos = state.to_screen_coords(DVec2::new(trail.x, trail.y), ws);
+            gl::Enablei(SCISSOR_TEST, 0);
+            gl::Scissor(pos.x - HALF_SIZE / 2, pos.y - HALF_SIZE / 2, OBJ_SIZE / 2, OBJ_SIZE / 2);
+            gl::ClearColor(0.6, 0.3, 0.2, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
 
+        for obj in query.iter() {
             let pos = state.to_screen_coords(DVec2::new(obj.comp.0.x, obj.comp.0.y), ws);
             gl::Enablei(SCISSOR_TEST, 0);
             gl::Scissor(pos.x - HALF_SIZE, pos.y - HALF_SIZE, OBJ_SIZE, OBJ_SIZE);
@@ -185,20 +206,20 @@ fn main() {
         create_phys_entity(
             world,
             DVec3::new(0.0, 0.0, 0.0),
-            1e2,
+            1e16,
             DVec3::new(0.0, 0.0, 0.0),
         );
         create_phys_entity(
             world,
-            DVec3::new(1.0, 0.0, 0.0),
-            1e2,
-            DVec3::new(0.0, 1.0, 0.0),
+            DVec3::new(200.0, 0.0, 0.0),
+            1e9,
+            DVec3::new(0.0, 10.0, 0.0),
         );
         create_phys_entity(
             world,
-            DVec3::new(0.0, 1.0, 0.0),
-            1e2,
-            DVec3::new(0.0, 0.0, 0.0),
+            DVec3::new(0.0, 100.0, 0.0),
+            1e9,
+            DVec3::new(50.0, 0.0, 0.0),
         );
     }
 
@@ -227,6 +248,7 @@ fn main() {
             gravity_constant: 6.6743e-11,
             center: DVec2::zero(),
             scale: 1.0,
+            trails: Vec::new(),
         };
         let mut gravity_logic = StateLogic::new(gravity_state);
         gravity_logic.add_function(init_gravity_sys, LogicFuncType::Init);
