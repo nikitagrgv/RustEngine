@@ -20,6 +20,7 @@ use gl::SCISSOR_TEST;
 use glm::{clamp, cos, sin, DMat4, DVec2, DVec3, DVec4, IVec2, UVec2, Vec2, Vec3};
 use sdl2::keyboard::Scancode;
 use std::ops::{Deref, DerefMut};
+use sdl2::mouse::MouseButton;
 
 macro_rules! thing_component_wrapper {
     ($name: ident, $base: ty) => {
@@ -93,6 +94,15 @@ fn update_gravity_sys(
     let input = ei.get_subsystem::<Input>();
     let time = ei.get_subsystem::<Time>();
     let dt = time.get_delta();
+
+
+    if input.is_mouse_down(MouseButton::Left)
+    {
+        println!("PRESSED");
+    }
+
+
+
 
     let mut dir = DVec4::zero();
     if input.is_key_down(Scancode::A) {
