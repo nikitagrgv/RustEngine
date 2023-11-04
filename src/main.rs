@@ -137,43 +137,6 @@ fn update_gravity_sys(
         pitch += 1.0;
     }
     state.camera_transform = glm::rotate_x(&state.camera_transform, pitch * dt * 5.0.to_radians());
-
-    // let mut scale = 1.0;
-    // if input.is_key_down(Scancode::Q) {
-    //     scale /= (1.0 + 2.0 * dt);
-    // }
-    // if input.is_key_down(Scancode::E) {
-    //     scale *= (1.0 + 2.0 * dt);
-    // }
-    // state.camera_transform.m11 /= scale;
-    // state.camera_transform.m22 /= scale;
-    // state.camera_transform.m33 /= scale;
-    //
-    // let mut move_dir = DVec4::zero();
-    // if input.is_key_down(Scancode::A) {
-    //     move_dir.x += 1.0;
-    // }
-    // if input.is_key_down(Scancode::D) {
-    //     move_dir.x -= 1.0;
-    // }
-    // if input.is_key_down(Scancode::W) {
-    //     move_dir.y -= 1.0;
-    // }
-    // if input.is_key_down(Scancode::S) {
-    //     move_dir.y += 1.0;
-    // }
-    // let move_delta = state.camera_transform * move_dir * 10.0;
-    // let new_pos = state.camera_transform.column(3) + move_delta;
-    // state.camera_transform.set_column(3, &new_pos);
-    //
-    // let mut rotate_z = 0.0;
-    // if input.is_key_down(Scancode::Left) {
-    //     rotate_z -= 1.0;
-    // }
-    // if input.is_key_down(Scancode::Right) {
-    //     rotate_z += 1.0;
-    // }
-    // state.camera_transform = glm::rotate_y(&state.camera_transform, rotate_z * dt);
 }
 
 fn update_ecs_gravity_sys(
