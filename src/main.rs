@@ -52,6 +52,7 @@ struct GravitySystemState {
     center: DVec2,
     scale: f64,
 
+    cur_trail_num: usize,
     trails: Vec<DVec3>,
 }
 
@@ -129,12 +130,26 @@ fn update_ecs_gravity_sys(
         obj.comp.0 .0 = obj.comp.0 .0 + obj.comp.1 .0 * dt;
     }
 
-    // update trails
-    while state.trails.len() > 10000 {
-        state.trails.remove(0);
-    }
+    // if (state.trails.len() > 10000) {
+    //     for obj in query.iter() {
+    //         state.trails(obj.comp.0 .0);
+    //     }
+    // } else {
+    //     for obj in query.iter() {
+    //         state.trails.push(obj.comp.0 .0);
+    //     }
+    // }
     for obj in query.iter() {
-        state.trails.push(obj.comp.0 .0);
+        if state.cur_trail_num >= 10000 {
+            state.cur_trail_num = 0;
+        }
+        let pos = obj.comp.0 .0;
+        if state.cur_trail_num >= state.trails.len() {
+            state.trails.push(pos);
+        } else {
+            state.trails[state.cur_trail_num] = pos;
+        }
+        state.cur_trail_num += 1;
     }
     println!("TRAILS : {}", state.trails.len())
 }
@@ -168,11 +183,15 @@ fn render_positions(
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
         // render trails
-        for trail in &state.trails
-        {
+        for trail in &state.trails {
             let pos = state.to_screen_coords(DVec2::new(trail.x, trail.y), ws);
             gl::Enablei(SCISSOR_TEST, 0);
-            gl::Scissor(pos.x - HALF_SIZE / 2, pos.y - HALF_SIZE / 2, OBJ_SIZE / 2, OBJ_SIZE / 2);
+            gl::Scissor(
+                pos.x - HALF_SIZE / 2,
+                pos.y - HALF_SIZE / 2,
+                OBJ_SIZE / 2,
+                OBJ_SIZE / 2,
+            );
             gl::ClearColor(0.6, 0.3, 0.2, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
@@ -211,9 +230,15 @@ fn main() {
         );
         create_phys_entity(
             world,
+            DVec3::new(0.0, 20.0, 0.0),
+            1e9,
+            DVec3::new(-240.0, 0.0, 0.0),
+        );
+        create_phys_entity(
+            world,
             DVec3::new(200.0, 0.0, 0.0),
             1e9,
-            DVec3::new(0.0, 10.0, 0.0),
+            DVec3::new(0.0, 30.0, 0.0),
         );
         create_phys_entity(
             world,
@@ -221,6 +246,7 @@ fn main() {
             1e9,
             DVec3::new(50.0, 0.0, 0.0),
         );
+
     }
 
     {
@@ -248,6 +274,7 @@ fn main() {
             gravity_constant: 6.6743e-11,
             center: DVec2::zero(),
             scale: 1.0,
+            cur_trail_num: 0,
             trails: Vec::new(),
         };
         let mut gravity_logic = StateLogic::new(gravity_state);
