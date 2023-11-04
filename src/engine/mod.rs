@@ -189,6 +189,7 @@ impl Engine {
 
     pub fn run(&mut self) {
         self.init();
+        self.time.update();
         while !self.exit_flag {
             self.time.update();
 

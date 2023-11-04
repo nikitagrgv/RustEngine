@@ -108,6 +108,7 @@ fn update_ecs_gravity_sys(
     commands: &mut Commands,
 ) {
     let time = ei.get_subsystem::<Time>();
+    let dt = time.get_delta();
 
     let mut attractable_iterator = query.iter_mut();
     while let Some(attractable) = attractable_iterator.next() {
@@ -119,11 +120,11 @@ fn update_ecs_gravity_sys(
                 * (state.gravity_constant * attractor.comp.2 .0 / (distance * distance * distance));
             sum_accel = sum_accel + force;
         }
-        attractable.comp.1 .0 = attractable.comp.1 .0 + sum_accel;
+        attractable.comp.1 .0 = attractable.comp.1 .0 + sum_accel * dt;
     }
 
     for obj in query.iter_mut() {
-        obj.comp.0 .0 = obj.comp.0 .0 + obj.comp.1 .0 * time.get_delta();
+        obj.comp.0 .0 = obj.comp.0 .0 + obj.comp.1 .0 * dt;
     }
 }
 
@@ -145,32 +146,21 @@ fn render_positions(
     commands: &mut Commands,
 ) {
     let window = ei.get_subsystem::<Window>();
-    let window_size = window.get_size();
+    let ws = window.get_size();
 
     unsafe {
         gl::Disablei(SCISSOR_TEST, 0);
         gl::ClearColor(0.0, 0.0, 0.0, 1.0);
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
-        {
-            let pos = state.to_screen_coords(DVec2::new(0.0, 0.0), window_size);
+        for obj in query.iter() {
+            const OBJ_SIZE: i32 = 10;
+            const HALF_SIZE: i32 = OBJ_SIZE / 2;
+
+            let pos = state.to_screen_coords(DVec2::new(obj.comp.0.x, obj.comp.0.y), ws);
             gl::Enablei(SCISSOR_TEST, 0);
-            gl::Scissor(pos.x, pos.y, 10, 10);
+            gl::Scissor(pos.x - HALF_SIZE, pos.y - HALF_SIZE, OBJ_SIZE, OBJ_SIZE);
             gl::ClearColor(0.9, 0.9, 0.9, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
-        {
-            let pos = state.to_screen_coords(DVec2::new(10.0, 0.0), window_size);
-            gl::Enablei(SCISSOR_TEST, 0);
-            gl::Scissor(pos.x, pos.y, 10, 10);
-            gl::ClearColor(0.9, 0.1, 0.1, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
-        {
-            let pos = state.to_screen_coords(DVec2::new(0.0, 10.0), window_size);
-            gl::Enablei(SCISSOR_TEST, 0);
-            gl::Scissor(pos.x, pos.y, 10, 10);
-            gl::ClearColor(0.1, 0.9, 0.1, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
     }
@@ -195,20 +185,20 @@ fn main() {
         create_phys_entity(
             world,
             DVec3::new(0.0, 0.0, 0.0),
-            1e10,
+            1e2,
             DVec3::new(0.0, 0.0, 0.0),
         );
         create_phys_entity(
             world,
-            DVec3::new(1e6, 0.0, 0.0),
-            1e5,
-            DVec3::new(0.0, 1e6, 0.0),
+            DVec3::new(1.0, 0.0, 0.0),
+            1e2,
+            DVec3::new(0.0, 1.0, 0.0),
         );
         create_phys_entity(
             world,
-            DVec3::new(0.0, 1e6, 0.0),
-            1e7,
-            DVec3::new(1e6, 0.0, 0.0),
+            DVec3::new(0.0, 1.0, 0.0),
+            1e2,
+            DVec3::new(0.0, 0.0, 0.0),
         );
     }
 
@@ -240,6 +230,7 @@ fn main() {
         };
         let mut gravity_logic = StateLogic::new(gravity_state);
         gravity_logic.add_function(init_gravity_sys, LogicFuncType::Init);
+        gravity_logic.add_ecs_function(print_positions, LogicFuncType::Init);
         gravity_logic.add_function(update_gravity_sys, LogicFuncType::Update);
         gravity_logic.add_ecs_function(update_ecs_gravity_sys, LogicFuncType::Update);
         gravity_logic.add_ecs_function(print_positions, LogicFuncType::PostUpdate);
