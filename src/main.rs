@@ -149,7 +149,7 @@ fn update_gravity_sys(
         new_transform.set_column(3, &pos);
         state.camera_transform = new_transform;
 
-        println!("pos: {}", state.camera_transform.column(3));
+        // println!("pos: {}", state.camera_transform.column(3));
     }
 }
 
