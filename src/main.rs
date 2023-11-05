@@ -16,7 +16,6 @@ use crate::math::*;
 use crate::num::*;
 use crate::world::*;
 use gl::types::{GLfloat, GLint, GLuint};
-use gl::SCISSOR_TEST;
 use glm::{clamp, cos, sin, DMat4, DVec2, DVec3, DVec4, IVec2, UVec2, Vec2, Vec3};
 use sdl2::keyboard::Scancode;
 use sdl2::mouse::MouseButton;
@@ -59,6 +58,7 @@ struct GravitySystemState {
 
     last_print_time: f64,
 }
+impl StateObject for GravitySystemState {}
 
 impl GravitySystemState {
     // TODO: no window_size
@@ -220,7 +220,7 @@ fn render_positions(
     state.proj_view = proj * view;
 
     unsafe {
-        gl::Disablei(SCISSOR_TEST, 0);
+        gl::Disablei(gl::SCISSOR_TEST, 0);
         gl::ClearColor(0.0, 0.0, 0.0, 1.0);
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
@@ -230,7 +230,7 @@ fn render_positions(
                 None => continue,
                 Some(p) => p,
             };
-            gl::Enablei(SCISSOR_TEST, 0);
+            gl::Enablei(gl::SCISSOR_TEST, 0);
             gl::Scissor(
                 pos.x - HALF_TRAIL_SIZE,
                 pos.y - HALF_TRAIL_SIZE,
@@ -246,7 +246,7 @@ fn render_positions(
                 None => continue,
                 Some(p) => p,
             };
-            gl::Enablei(SCISSOR_TEST, 0);
+            gl::Enablei(gl::SCISSOR_TEST, 0);
             gl::Scissor(pos.x - HALF_SIZE, pos.y - HALF_SIZE, OBJ_SIZE, OBJ_SIZE);
             let col = obj.comp.1;
             gl::ClearColor(col.x, col.y, col.z, 1.0);

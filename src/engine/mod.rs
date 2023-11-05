@@ -9,7 +9,7 @@ use crate::engine::logic::{Logic, LogicFuncType, StateLogic, StateObject};
 use crate::engine::time::Time;
 use crate::input::*;
 use crate::utils;
-use crate::world::{Entity, World};
+use crate::world::{Entity, Fetcherable, Query, World};
 use glm::{IVec2, UVec2};
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Scancode};
